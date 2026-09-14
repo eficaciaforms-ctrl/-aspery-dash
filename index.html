@@ -525,17 +525,15 @@ var USERS = {
 
 // Cada supervisor con sus promotoras (de tu Excel)
 var SUP_MAP = {
-  "SUPLIMA":     ["PROMLIM1","PROMLIM3","PROMLIM5","PROMLIM6","PROMAD"],
-  "SUPAREQUIPA": ["PROMAQP","PROMCUS","PROMTAC"],
-  "SUPCHICLAYO": ["PROMTRUX","PROMCIX"],
-  "SUPPIURA":    ["PROMICA","PROMPIU"],
-  "SUPHUANCAYO": ["PROMHYO","PROMTPP"]
+  "SUPLIMA":     ["PROMLIM1","PROMLIM3","PROMLIM5","PROMLIM6"],
+  "SUPAREQUIPA": ["PROMICA","PROMAQP","PROMCUS","PROMTAC"],
+  "SUPHUANCAYO": ["PROMTPP","PROMHYO"],
+  "SUPPIURA":    ["PROMTRUX","PROMCIX","PROMPIU"]
 };
 
-var TODOS_PROMS = ["PROMAQP","PROMCUS","PROMHYO","PROMTRUX","PROMCIX","PROMLIM1","PROMLIM3","PROMLIM5","PROMLIM6","PROMAD","PROMICA","PROMPIU","PROMTPP","PROMTAC"];
-// Promotoras dadas de baja: sus registros históricos siguen apareciendo, pero NO se miden
-// ni se marcan como "sin registros" de aquí en adelante.
-var BAJA_PROMS = ["PROMAD"];
+var TODOS_PROMS = ["PROMTRUX","PROMCIX","PROMPIU","PROMICA","PROMAQP","PROMCUS","PROMTAC","PROMTPP","PROMHYO","PROMLIM1","PROMLIM3","PROMLIM5","PROMLIM6"];
+// PROMAD ya no se muestra ni se mide en el dashboard.
+var BAJA_PROMS = [];
 
 // ════════════════════════════════════════════════════════
 // CAUSALES (con preguntas asociadas — para análisis ejecutivo)
