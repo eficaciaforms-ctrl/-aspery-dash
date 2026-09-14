@@ -519,7 +519,7 @@ var GEO_BOUNDS = {
 var USERS = {
   "JEFECANAL":   { pass:"JEFE123$",  role:"jefe", nombre:"SEBASTIAN PEREYRA", zona:"Nacional" },
   "SUPLIMA":     { pass:"SUPER123$", role:"sup",  nombre:"ALBERTO SILVA",     zona:"Lima" },
-  "SUPAREQUIPA": { pass:"SUPER123$", role:"sup",  nombre:"CARLOS MAMANI",     zona:"Sur" },
+  "SUPAREQUIPA": { pass:"SUPER123$", role:"sup",  nombre:"DIANA GAMERO",     zona:"Sur" },
   "SUPCHICLAYO": { pass:"SUPER123$", role:"sup",  nombre:"MIGUEL BAZAN",      zona:"Norte" },
   "SUPPIURA":    { pass:"SUPER123$", role:"sup",  nombre:"ROBERTO ARICA",     zona:"Piura" },
   "SUPHUANCAYO": { pass:"SUPER123$", role:"sup",  nombre:"GABRIELA YMAÑA",    zona:"Centro" },
@@ -976,7 +976,7 @@ function fmtRango() {
 }
 // Clave única para localStorage por rango
 function rangoKey() { return FECHA_DESDE + '_' + FECHA_HASTA; }
-function recargar(){ cargarData(); }
+function recargar(){ _gasCache = {}; cargarData(); }
 
 // ════════════════════════════════════════════════════════
 // CONEXION CON EL GAS REAL
@@ -1001,6 +1001,8 @@ function setScriptURL(url) {
 }
 
 // Llamar al GAS mediante GET (JSONP-style con query params)
+var _gasCache = {};
+var GAS_TTL = 60000; // reusar respuesta hasta 60s (velocidad)
 function gasGetReal(params, callback) {
   var url = getScriptURL();
   if (!url) { callback(null); return; }
@@ -1009,21 +1011,29 @@ function gasGetReal(params, callback) {
   }).join('&');
   var fullUrl = url + '?' + qs;
 
-  // Usar fetch con timeout
-  var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
-  var timer = setTimeout(function() { if (ctrl) ctrl.abort(); }, 20000);
+  // 1) Caché: si hay una respuesta reciente, la devuelve al instante
+  var c = _gasCache[fullUrl];
+  if (c && (Date.now() - c.t) < GAS_TTL) { callback(c.data); return; }
 
-  fetch(fullUrl, { method: 'GET', signal: ctrl ? ctrl.signal : undefined })
-    .then(function(r) {
-      clearTimeout(timer);
-      return r.json();
-    })
-    .then(function(data) { callback(data); })
-    .catch(function(e) {
-      clearTimeout(timer);
-      console.error('Error GAS:', e);
-      callback(null);
-    });
+  // 2) fetch con timeout + reintentos automáticos (hasta 3) para que no falle por señal
+  var intentos = 0;
+  function go() {
+    intentos++;
+    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var timer = setTimeout(function() { if (ctrl) ctrl.abort(); }, 18000);
+    fetch(fullUrl, { method: 'GET', signal: ctrl ? ctrl.signal : undefined })
+      .then(function(r) { clearTimeout(timer); return r.json(); })
+      .then(function(data) {
+        if (data && data.status === 'ok') _gasCache[fullUrl] = { t: Date.now(), data: data };
+        callback(data);
+      })
+      .catch(function(e) {
+        clearTimeout(timer);
+        if (intentos < 3) { setTimeout(go, 700 * intentos); }   // reintenta con pausa creciente
+        else { console.error('Error GAS:', e); callback(null); }
+      });
+  }
+  go();
 }
 
 // Normalizar fecha que viene del GAS a formato YYYY-MM-DD
@@ -1187,20 +1197,13 @@ function cargarStock(dias, promsCSV) {
   }
   if (!dias || !dias.length) { STOCK_DATA = []; return; }
   var seq = LOAD_SEQ;
-  var todas = [];
-  var pend = dias.length;
-  dias.forEach(function(d) {
-    gasGetReal({accion: 'listar_stock', promotoras: promsCSV, fecha: d}, function(resp) {
-      if (resp && resp.status === 'ok' && resp.filas) todas = todas.concat(resp.filas);
-      pend--;
-      if (pend === 0) {
-        if (seq !== LOAD_SEQ) return;
-        STOCK_DATA = convertirStockGAS(todas).filter(function(r) {
-          return r.fecha >= FECHA_DESDE && r.fecha <= FECHA_HASTA;
-        });
-        if (esTabStock()) renderContent();
-      }
+  gasGetReal({accion: 'listar_stock', promotoras: promsCSV, desde: FECHA_DESDE, hasta: FECHA_HASTA}, function(resp) {
+    if (seq !== LOAD_SEQ) return;
+    var filas = (resp && resp.status === 'ok' && resp.filas) ? resp.filas : [];
+    STOCK_DATA = convertirStockGAS(filas).filter(function(r) {
+      return r.fecha >= FECHA_DESDE && r.fecha <= FECHA_HASTA;
     });
+    if (esTabStock()) renderContent();
   });
 }
 
@@ -1670,7 +1673,7 @@ function cargarMarcaciones(dias, promsCSV){
   }
   if(!dias||!dias.length){ MARCA_DATA=[]; UBIC_DIA=[]; return; }
   var seq=LOAD_SEQ;
-  var mAll=[], uAll=[], pend=dias.length*2;
+  var mAll=[], uAll=[], pend=2;
   function done(){
     pend--;
     if(pend<=0){
@@ -1681,10 +1684,8 @@ function cargarMarcaciones(dias, promsCSV){
       if(TAB_ACTUAL==='marcaciones') renderContent();
     }
   }
-  dias.forEach(function(d){
-    gasGetReal({accion:'listar_marcaciones', promotoras:promsCSV, fecha:d}, function(r){ if(r&&r.status==='ok'&&r.filas) mAll=mAll.concat(r.filas); done(); });
-    gasGetReal({accion:'listar_ubicaciones', promotoras:promsCSV, fecha:d}, function(r){ if(r&&r.status==='ok'&&r.filas) uAll=uAll.concat(r.filas); done(); });
-  });
+  gasGetReal({accion:'listar_marcaciones', promotoras:promsCSV, desde:FECHA_DESDE, hasta:FECHA_HASTA}, function(r){ if(r&&r.status==='ok'&&r.filas) mAll=r.filas; done(); });
+  gasGetReal({accion:'listar_ubicaciones', promotoras:promsCSV, desde:FECHA_DESDE, hasta:FECHA_HASTA}, function(r){ if(r&&r.status==='ok'&&r.filas) uAll=r.filas; done(); });
 }
 // Última ubicación (ping) por usuario
 function ultimaUbicDe(u){
@@ -2081,23 +2082,22 @@ function cargarData() {
     }
   }
 
-  dias.forEach(function(diaActual) {
-    gasGetReal({
-      accion: 'listar_equipo',
-      promotoras: promsCSV,
-      fecha: diaActual
-    }, function(resp) {
-      if (resp && resp.status === 'ok' && resp.filas) {
-        todasFilas = todasFilas.concat(resp.filas);
-        diasOK++;
-      } else {
-        diasFail++;
-        console.error('Error cargando día', diaActual, resp);
-      }
-      pendientes--;
-      actualizarProgreso();
-      if (pendientes === 0) terminar();
-    });
+  gasGetReal({
+    accion: 'listar_equipo',
+    promotoras: promsCSV,
+    desde: FECHA_DESDE,
+    hasta: FECHA_HASTA
+  }, function(resp) {
+    if (resp && resp.status === 'ok' && resp.filas) {
+      todasFilas = resp.filas;
+      diasOK++;
+    } else {
+      diasFail++;
+      console.error('Error cargando rango', resp);
+    }
+    pendientes = 0;
+    actualizarProgreso();
+    terminar();
   });
 }
 
