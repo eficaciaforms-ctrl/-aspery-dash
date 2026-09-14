@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Dashboard S2S · Kenvue</title>
+<title>Aspery Dash</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -13,8 +13,8 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased;}
 :root{
-  --blue:#2563EB;--blue-d:#1E40AF;--blue-l:#EFF6FF;--blue-ll:#DBEAFE;
-  --dark:#0F172A;--dark2:#1E293B;
+  --blue:#0EA5F9;--blue-d:#0284C7;--blue-l:#E6F5FE;--blue-ll:#CDEBFB;
+  --dark:#051D3A;--dark2:#0A2E52;
   --bg:#F8FAFC;--card:#FFFFFF;
   --text:#1E293B;--t2:#64748B;--t3:#94A3B8;
   --border:#E2E8F0;
@@ -29,7 +29,7 @@ body{font-family:'Inter',-apple-system,system-ui,sans-serif;background:var(--bg)
 button{font-family:inherit;}
 
 /* ════════ LOGIN ════════ */
-.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(135deg,#0F172A 0%,#1E293B 50%,#2563EB 100%);}
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(135deg,#0F172A 0%,#1E293B 50%,#0EA5F9 100%);}
 .login-card{background:#fff;border-radius:20px;padding:36px 32px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.3);}
 .login-logo{width:64px;height:64px;background:var(--dark);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;color:#fff;font-size:30px;}
 .login-title{text-align:center;font-size:20px;font-weight:600;margin-bottom:4px;}
@@ -81,7 +81,7 @@ button{font-family:inherit;}
 .tabs{background:var(--card);border-bottom:1px solid var(--border);padding:0 24px;display:flex;gap:2px;overflow-x:auto;position:sticky;top:114px;z-index:1080;}
 /* ── Menú lateral colapsable (tipo Involves) ── */
 .dash{margin-left:64px}
-.side{position:fixed;left:0;top:0;bottom:0;width:64px;background:linear-gradient(180deg,#2563EB 0%,#1E3A8A 45%,#0F172A 100%);z-index:2000;overflow:hidden;transition:width .18s ease;box-shadow:2px 0 16px rgba(2,6,23,.22);display:flex;flex-direction:column;padding-top:8px}
+.side{position:fixed;left:0;top:0;bottom:0;width:64px;background:linear-gradient(180deg,#0EA5F9 0%,#083D5C 45%,#0F172A 100%);z-index:2000;overflow:hidden;transition:width .18s ease;box-shadow:2px 0 16px rgba(2,6,23,.22);display:flex;flex-direction:column;padding-top:8px}
 .side:hover{width:240px}
 .side-logo{display:flex;align-items:center;gap:12px;padding:12px 19px 18px;color:#fff;white-space:nowrap}
 .side-logo .lg{font-size:23px;flex-shrink:0}
@@ -241,7 +241,7 @@ button{font-family:inherit;}
 .mk-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--t2)}
 .mk-row b{color:var(--text);font-weight:700}
 .mk-btn{display:block;width:100%;margin-top:11px;border:none;border-radius:9px;padding:9px;background:var(--blue);color:#fff;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit}
-.mk-btn:hover{background:#1D4ED8}
+.mk-btn:hover{background:#0284C7}
 .mk-card{transition:transform .12s ease, box-shadow .12s ease}
 .mk-card.ok{cursor:pointer}
 .mk-card.ok:hover{transform:translateY(-2px);box-shadow:0 10px 22px rgba(2,6,23,.10)}
@@ -326,7 +326,7 @@ button{font-family:inherit;}
 <div id="screen-login" class="login-wrap">
   <div class="login-card">
     <div class="login-logo">📊</div>
-    <p class="login-title">Dashboard S2S</p>
+    <p class="login-title">Aspery Dash</p>
     <p class="login-sub">Acceso ejecutivo · Kenvue Perú</p>
     <div class="login-err" id="login-err"></div>
     <div class="fld">
@@ -851,7 +851,7 @@ var MODULO_ACTUAL = 'ventas';
 
 function renderSide(){
   var el = document.getElementById('side'); if(!el) return;
-  var h = '<div class="side-logo"><span class="lg">📊</span><span class="tx">Dashboard S2S</span></div>';
+  var h = '<div class="side-logo"><span class="lg">📊</span><span class="tx">Aspery Dash</span></div>';
   MODULOS.forEach(function(m){
     h += '<div class="side-item'+(m.id===MODULO_ACTUAL?' on':'')+'" onclick="setModulo(\''+m.id+'\')" title="'+m.lbl+'"><span class="ic">'+m.ico+'</span><span class="lb">'+m.lbl+'</span></div>';
   });
@@ -1749,7 +1749,7 @@ function renderMarcaciones(){
 
   // Tarjetas: primero los que marcaron (verde), luego sin marcar
   var orden = marcaron.concat(sinMarcar);
-  var colores=['#2563EB','#059669','#D97706','#7C3AED','#0D9488','#DB2777','#0891B2'];
+  var colores=['#0EA5F9','#059669','#D97706','#7C3AED','#0D9488','#DB2777','#0891B2'];
   function inic(u){ return u.replace(/[^A-Z0-9]/gi,'').slice(-2).toUpperCase(); }
   function colUsr(u){ var s=0; for(var i=0;i<u.length;i++) s+=u.charCodeAt(i); return colores[s%colores.length]; }
   html+='<div class="sec"><div class="sec-hdr"><div class="sec-ttl"><div class="sec-ttl-ico">🟢</div>Estado de marcación del equipo</div></div>';
@@ -1941,16 +1941,16 @@ function sdMapa(ini,fin){
     maxZoom:20, subdomains:'abcd', attribution:'&copy; OpenStreetMap &copy; CARTO'
   }).addTo(SD_MAP);
   // recorrido
-  if(all.length>1) L.polyline(all,{color:'#2563EB',weight:3,opacity:.7}).addTo(SD_MAP);
+  if(all.length>1) L.polyline(all,{color:'#0EA5F9',weight:3,opacity:.7}).addTo(SD_MAP);
   // pings
   SD_UBIC.forEach(function(p){
-    L.circleMarker([p.lat,p.lng],{radius:5,color:'#fff',weight:1,fillColor:'#2563EB',fillOpacity:.85})
+    L.circleMarker([p.lat,p.lng],{radius:5,color:'#fff',weight:1,fillColor:'#0EA5F9',fillOpacity:.85})
       .addTo(SD_MAP).bindPopup('📍 '+p.hora+'<br>🔋 '+(p.bat||'—')+(p.acc?('<br>Precisión ±'+p.acc+' m'):''));
   });
   // círculo de precisión del último punto (útil cuando el GPS es impreciso)
   var last=SD_UBIC.length?SD_UBIC[SD_UBIC.length-1]:null;
   if(last && last.acc && !isNaN(parseFloat(last.acc)) && parseFloat(last.acc)>0){
-    L.circle([last.lat,last.lng],{radius:Math.min(parseFloat(last.acc),3000),color:'#2563EB',weight:1,fillOpacity:.08}).addTo(SD_MAP);
+    L.circle([last.lat,last.lng],{radius:Math.min(parseFloat(last.acc),3000),color:'#0EA5F9',weight:1,fillOpacity:.08}).addTo(SD_MAP);
   }
   // inicio / fin
   if(iniPt) L.circleMarker(iniPt,{radius:10,color:'#fff',weight:3,fillColor:'#059669',fillOpacity:1}).addTo(SD_MAP).bindPopup('🟢 INICIO · '+(ini.horaSrv||''));
@@ -3029,7 +3029,7 @@ function renderGeo() {
   html += '<div class="map-legend-ttl">Intensidad de ventas</div>';
   html += '<div class="map-legend-row"><div class="map-legend-dot" style="background:#DC2626"></div>Muy alta (top 20%)</div>';
   html += '<div class="map-legend-row"><div class="map-legend-dot" style="background:#F59E0B"></div>Alta</div>';
-  html += '<div class="map-legend-row"><div class="map-legend-dot" style="background:#2563EB"></div>Media</div>';
+  html += '<div class="map-legend-row"><div class="map-legend-dot" style="background:#0EA5F9"></div>Media</div>';
   html += '<div class="map-legend-row"><div class="map-legend-dot" style="background:#10B981"></div>Baja</div>';
   html += '<div class="map-legend-row"><div class="map-legend-dot" style="background:#94A3B8"></div>Mínima</div>';
   html += '</div>';
@@ -3261,7 +3261,7 @@ function pintarMapaCalor() {
   loader.onAdd = function() {
     var div = L.DomUtil.create('div');
     div.id = 'map-geo-loader';
-    div.innerHTML = '<div style="background:rgba(255,255,255,.96);padding:8px 12px;border-radius:8px;font-size:11px;color:#64748B;box-shadow:0 2px 8px rgba(0,0,0,.1)"><span style="display:inline-block;width:10px;height:10px;border:2px solid #E2E8F0;border-top-color:#2563EB;border-radius:50%;animation:spin 1s linear infinite;vertical-align:-2px;margin-right:6px"></span> Cargando mapa...</div>';
+    div.innerHTML = '<div style="background:rgba(255,255,255,.96);padding:8px 12px;border-radius:8px;font-size:11px;color:#64748B;box-shadow:0 2px 8px rgba(0,0,0,.1)"><span style="display:inline-block;width:10px;height:10px;border:2px solid #E2E8F0;border-top-color:#0EA5F9;border-radius:50%;animation:spin 1s linear infinite;vertical-align:-2px;margin-right:6px"></span> Cargando mapa...</div>';
     return div;
   };
   loader.addTo(MAP_INSTANCE);
@@ -3299,7 +3299,7 @@ function pintarMapaCalor() {
       if (tot === 0) return '#E5E7EB'; // sin datos
       if (tot >= p80) return '#DC2626';
       if (tot >= p60) return '#F59E0B';
-      if (tot >= p40) return '#2563EB';
+      if (tot >= p40) return '#0EA5F9';
       if (tot >= p20) return '#10B981';
       return '#94A3B8';
     }
