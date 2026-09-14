@@ -1953,20 +1953,36 @@ function sdMapa(ini,fin){
   // Capa de mapa CARTO Voyager: muestra calles, ciudad y distrito con claridad (confiable)
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ maxZoom:19, subdomains:'abc', attribution:'&copy; OpenStreetMap' }).addTo(SD_MAP);
   // recorrido
-  if(all.length>1) L.polyline(all,{color:'#0EA5F9',weight:3,opacity:.7}).addTo(SD_MAP);
-  // pings
-  SD_UBIC.forEach(function(p){
-    L.circleMarker([p.lat,p.lng],{radius:5,color:'#fff',weight:1,fillColor:'#0EA5F9',fillOpacity:.85})
-      .addTo(SD_MAP).bindPopup('📍 '+p.hora+'<br>🔋 '+(p.bat||'—')+(p.acc?('<br>Precisión ±'+p.acc+' m'):''));
-  });
-  // círculo de precisión del último punto (útil cuando el GPS es impreciso)
-  var last=SD_UBIC.length?SD_UBIC[SD_UBIC.length-1]:null;
-  if(last && last.acc && !isNaN(parseFloat(last.acc)) && parseFloat(last.acc)>0){
-    L.circle([last.lat,last.lng],{radius:Math.min(parseFloat(last.acc),3000),color:'#0EA5F9',weight:1,fillOpacity:.08}).addTo(SD_MAP);
+  // Construir el recorrido en ORDEN cronológico: inicio + ubicaciones + fin
+  var ruta = [];
+  if(iniPt) ruta.push({pt:iniPt, hora:(ini.horaSrv||''), tipo:'inicio'});
+  SD_UBIC.forEach(function(p){ if(okPeru([p.lat,p.lng])) ruta.push({pt:[p.lat,p.lng], hora:p.hora, bat:p.bat, acc:p.acc, tipo:'ubic'}); });
+  if(finPt) ruta.push({pt:finPt, hora:(fin.horaSrv||''), tipo:'fin'});
+  var linePts = ruta.map(function(r){ return r.pt; });
+
+  // Línea del recorrido que pasa por TODOS los puntos en orden (no recta inicio→fin)
+  if(linePts.length>1){
+    L.polyline(linePts,{color:'#0EA5F9',weight:4,opacity:.8}).addTo(SD_MAP);
+    // Flechas de dirección en cada tramo (hacia dónde se movió)
+    for(var t=0;t<linePts.length-1;t++){
+      var a=linePts[t], b=linePts[t+1];
+      var mid=[(a[0]+b[0])/2,(a[1]+b[1])/2];
+      var ang=Math.atan2(b[0]-a[0], b[1]-a[1])*180/Math.PI;
+      var flecha=L.divIcon({className:'sd-arrow', html:'<div style="transform:rotate('+(-ang)+'deg);color:#0284C7;font-size:15px;font-weight:900;line-height:1">➤</div>', iconSize:[16,16], iconAnchor:[8,8]});
+      L.marker(mid,{icon:flecha, interactive:false}).addTo(SD_MAP);
+    }
   }
-  // inicio / fin
-  if(iniPt) L.circleMarker(iniPt,{radius:10,color:'#fff',weight:3,fillColor:'#059669',fillOpacity:1}).addTo(SD_MAP).bindPopup('🟢 INICIO · '+(ini.horaSrv||''));
-  if(finPt) L.circleMarker(finPt,{radius:10,color:'#fff',weight:3,fillColor:'#DC2626',fillOpacity:1}).addTo(SD_MAP).bindPopup('🏁 FIN · '+(fin.horaSrv||''));
+
+  // Marcadores NUMERADOS: I (inicio) · 1,2,3… (ubicaciones en orden) · F (fin)
+  var num=0;
+  ruta.forEach(function(r){
+    var esIni=r.tipo==='inicio', esFin=r.tipo==='fin';
+    var etq = esIni?'I':(esFin?'F':(++num));
+    var bg = esIni?'#059669':(esFin?'#DC2626':'#0EA5F9');
+    var ico=L.divIcon({className:'sd-numico', html:'<div style="background:'+bg+';color:#fff;min-width:24px;height:24px;padding:0 3px;border-radius:12px;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;box-shadow:0 2px 4px rgba(0,0,0,.35)">'+etq+'</div>', iconSize:[24,24], iconAnchor:[12,12]});
+    var pop=(esIni?'🟢 INICIO de ruta':(esFin?'🏁 FIN de ruta':'📍 Punto '+etq))+' · '+r.hora+(r.bat?'<br>🔋 '+r.bat:'')+(r.acc?'<br>Precisión ±'+r.acc+' m':'');
+    L.marker(r.pt,{icon:ico}).addTo(SD_MAP).bindPopup(pop);
+  });
   function ajustar(){ if(!SD_MAP) return; SD_MAP.invalidateSize(); try{ SD_MAP.fitBounds(L.latLngBounds(all),{padding:[35,35], maxZoom:16}); }catch(e){} }
   setTimeout(ajustar,120); setTimeout(ajustar,450); setTimeout(ajustar,1100);
   // Dirección con nombre (departamento / ciudad / distrito) del último punto
