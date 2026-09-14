@@ -1935,10 +1935,14 @@ function sdMapa(ini,fin){
   if(typeof L==='undefined'){ el.innerHTML='<div class="empty" style="padding:20px">No se pudo cargar el mapa (revisa la conexión a internet).</div>'; return; }
   if(SD_MAP){ try{ SD_MAP.remove(); }catch(e){} SD_MAP=null; }
   var pts=SD_UBIC.map(function(p){ return [p.lat,p.lng]; });
-  var iniPt = ini&&ini.lat?[parseFloat(ini.lat),parseFloat(ini.lng)]:null;
-  var finPt = fin&&fin.lat?[parseFloat(fin.lat),parseFloat(fin.lng)]:null;
+  // Validar que el punto esté dentro de Perú (descarta coords rotas que van a la Antártida)
+  function okPeru(c){ return c && !isNaN(c[0]) && !isNaN(c[1]) && c[0]<=1 && c[0]>=-19.5 && c[1]<=-68 && c[1]>=-82; }
+  var iniPt = (ini&&ini.lat)?[parseFloat(ini.lat),parseFloat(ini.lng)]:null;
+  var finPt = (fin&&fin.lat)?[parseFloat(fin.lat),parseFloat(fin.lng)]:null;
+  if(!okPeru(iniPt)) iniPt=null;
+  if(!okPeru(finPt)) finPt=null;
   var all=pts.slice(); if(iniPt)all.unshift(iniPt); if(finPt)all.push(finPt);
-  all=all.filter(function(c){ return c && !isNaN(c[0]) && !isNaN(c[1]) && (c[0]!==0 || c[1]!==0); });
+  all=all.filter(okPeru);
   var addrEl=document.getElementById('sd-addr');
   if(!all.length){
     el.innerHTML='<div class="empty" style="padding:24px">Sin coordenadas GPS para mostrar. La promotora debe tener el app abierto y permitir la ubicación.</div>';
