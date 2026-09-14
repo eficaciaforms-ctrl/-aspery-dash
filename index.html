@@ -34,6 +34,8 @@ button{font-family:inherit;}
 .login-logo{width:64px;height:64px;background:var(--dark);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;color:#fff;font-size:30px;}
 .login-title{text-align:center;font-size:20px;font-weight:600;margin-bottom:4px;}
 .login-sub{text-align:center;font-size:13px;color:var(--t2);margin-bottom:24px;}
+.login-foot{text-align:center;font-size:11.5px;color:var(--t3);margin-top:20px;}
+.login-foot b{color:var(--blue);font-weight:700;}
 .fld{margin-bottom:14px;}
 .fld label{display:block;font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
 .fld input,.fld select{width:100%;height:44px;padding:0 14px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;background:#fff;color:var(--text);-webkit-appearance:none;}
@@ -327,7 +329,7 @@ button{font-family:inherit;}
   <div class="login-card">
     <div class="login-logo">📊</div>
     <p class="login-title">Aspery Dash</p>
-    <p class="login-sub">Acceso ejecutivo · Kenvue Perú</p>
+    <p class="login-sub">Registro de ventas en tiempo real</p>
     <div class="login-err" id="login-err"></div>
     <div class="fld">
       <label>Usuario</label>
@@ -338,6 +340,7 @@ button{font-family:inherit;}
       <input type="password" id="lg-pass" placeholder="••••••••" autocomplete="current-password"/>
     </div>
     <button class="btn-login" onclick="doLogin()">Ingresar al Dashboard →</button>
+    <p class="login-foot">Desarrollado por <b>SPG</b></p>
     <div class="login-help">
       <strong>Usuarios de prueba:</strong><br>
       JEFECANAL / JEFE123$ &nbsp;·&nbsp; SUPLIMA / SUPER123$
@@ -855,7 +858,7 @@ function renderSide(){
   MODULOS.forEach(function(m){
     h += '<div class="side-item'+(m.id===MODULO_ACTUAL?' on':'')+'" onclick="setModulo(\''+m.id+'\')" title="'+m.lbl+'"><span class="ic">'+m.ico+'</span><span class="lb">'+m.lbl+'</span></div>';
   });
-  h += '<div class="side-foot"><span class="lb">Kenvue Perú · S2S</span></div>';
+  h += '<div class="side-foot"><span class="lb">Desarrollado por SPG</span></div>';
   el.innerHTML = h;
 }
 function setModulo(id){
@@ -1825,7 +1828,13 @@ function convertirUbicGAS(filas){
   return filas.map(function(f){
     return {hora:normHora(f[2]), usuario:String(f[3]||'').trim().toUpperCase(),
       lat:fixCoord(f[4],90), lng:fixCoord(f[5],180), acc:String(f[6]||''), bat:normBat(f[7])};
-  }).filter(function(p){ return !isNaN(p.lat) && !isNaN(p.lng); });
+  }).filter(function(p){
+    // Descartar coordenadas inválidas o imposibles para Perú (evita saltos a la Antártida/océano)
+    if (isNaN(p.lat) || isNaN(p.lng)) return false;
+    if (p.lat > 1 || p.lat < -19.5) return false;      // Perú: lat aprox 0 a -18.5
+    if (p.lng > -68 || p.lng < -82) return false;       // Perú: lng aprox -68.5 a -81.5
+    return true;
+  });
 }
 function sdProms(){
   return SESION.role==='jefe' ? TODOS_PROMS.slice() : (SUP_MAP[SESION.user]||[]);
@@ -1937,9 +1946,7 @@ function sdMapa(ini,fin){
   }
   SD_MAP=L.map(el).setView(all[0],15);
   // Capa de mapa CARTO Voyager: muestra calles, ciudad y distrito con claridad (confiable)
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
-    maxZoom:20, subdomains:'abcd', attribution:'&copy; OpenStreetMap &copy; CARTO'
-  }).addTo(SD_MAP);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ maxZoom:19, subdomains:'abc', attribution:'&copy; OpenStreetMap' }).addTo(SD_MAP);
   // recorrido
   if(all.length>1) L.polyline(all,{color:'#0EA5F9',weight:3,opacity:.7}).addTo(SD_MAP);
   // pings
@@ -3251,10 +3258,7 @@ function pintarMapaCalor() {
   }).setView([-9.5, -75], 5);
 
   // Tile layer
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-    maxZoom: 18,
-    subdomains: 'abcd'
-  }).addTo(MAP_INSTANCE);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ maxZoom:19, subdomains:'abc', attribution:'&copy; OpenStreetMap' }).addTo(MAP_INSTANCE);
 
   // Mostrar loader mientras carga el GeoJSON
   var loader = L.control({position:'topright'});
