@@ -1528,6 +1528,21 @@ function renderAsistencia() {
   });
 
   var pctEquipo = sumHab > 0 ? Math.round(sumRel / sumHab * 100) : 0;
+
+  // Pendientes de relevar HOY (no relevaron aún hoy, siendo día hábil)
+  var esHabilHoy = dias.some(function(d){ return d.fecha===hoyS && !d.sun && !d.fer; });
+  if (esHabilHoy) {
+    var pendHoy = filas.filter(function(f){
+      var set={}; (ATT_DIAS[f.prom]||[]).forEach(function(x){set[x]=true;});
+      return !set[hoyS] && !f.especial;
+    }).map(function(f){ return f.prom; });
+    if (pendHoy.length) {
+      html += '<div class="insight" style="border-left:4px solid var(--amber)"><div class="insight-lbl">⏳ PENDIENTES DE RELEVAR HOY</div><div class="insight-txt"><strong>'+pendHoy.join(', ')+'</strong> aún no relevan hoy. Contáctalos para que se pongan al día.</div></div>';
+    } else {
+      html += '<div class="insight" style="border-left:4px solid var(--green)"><div class="insight-lbl">✅ TODOS AL DÍA</div><div class="insight-txt">Todo tu equipo relevó hoy. ¡Buen trabajo!</div></div>';
+    }
+  }
+
   html += '<div class="kpis">';
   html += kpiCard('Usuarios', promsCount);
   html += kpiCard('Días hábiles (mes a hoy)', habilesHasta(hoyS));
@@ -1722,6 +1737,7 @@ function renderMarcaciones(){
   data.forEach(function(r){
     if(!porUser[r.usuario]) porUser[r.usuario]={};
     if(r.tipo==='FIN'){ if(!porUser[r.usuario].fin || r.horaSrv>porUser[r.usuario].fin.horaSrv) porUser[r.usuario].fin=r; }
+    else if(r.tipo==='CONVEND'){ if(!porUser[r.usuario].conv || r.horaSrv<porUser[r.usuario].conv.horaSrv) porUser[r.usuario].conv=r; }
     else { if(!porUser[r.usuario].ini || r.horaSrv>porUser[r.usuario].ini.horaSrv) porUser[r.usuario].ini=r; }
   });
   // Universo de usuarios a mostrar según rol y filtros (sin bajas)
@@ -1767,13 +1783,19 @@ function renderMarcaciones(){
       var lu = ultimaUbicDe(u);
       var horaUlt = lu ? lu.hora : (fin?fin.horaSrv:ini.horaSrv);
       var enRuta = horasEntre(ini.horaSrv, fin?fin.horaSrv:horaUlt);
+      var conv = porUser[u] && porUser[u].conv;
+      // Hora de "con vendedor": si marcó CONVEND úsala; si inició directo con vendedor, es la de inicio
+      var horaConv = conv ? conv.horaSrv : ((ini.vendedor && ini.vendedor.trim() && ini.vendedor.indexOf('confirmar')<0) ? ini.horaSrv : null);
+      // Total con vendedor: desde que estuvo con vendedor hasta el fin (o última ubicación)
+      var totalConVend = horaConv ? horasEntre(horaConv, fin?fin.horaSrv:horaUlt) : null;
       html+='<div class="mk-card ok" onclick="irStatusDayDe(\''+u+'\')" title="Ver recorrido de '+u+'">';
       html+='<div class="mk-head"><div class="mk-av" style="background:'+colUsr(u)+'">'+inic(u)+'</div><div><div class="mk-nm" style="padding-left:0">'+u+'</div>'+(sup?'<div class="mk-sup" style="padding-left:0">'+sup+'</div>':'')+'</div></div>';
-      html+='<div class="mk-st">'+(fin?'✓ Jornada cerrada':'<span class="mk-live"></span> En ruta · '+enRuta)+'</div>';
+      html+='<div class="mk-st">'+(fin?'✓ Jornada cerrada':(horaConv?'<span class="mk-live"></span> Con vendedor · '+enRuta:'<span class="mk-live" style="background:#D97706"></span> Solo(a) · '+enRuta))+'</div>';
       html+='<div class="mk-rows">';
-      html+='<div class="mk-row"><span>🟢 Inició</span><b>'+(ini.horaSrv||'—')+'</b></div>';
-      html+='<div class="mk-row"><span>📍 Últ. ubicación</span><b>'+(lu?lu.hora:'—')+'</b></div>';
-      html+='<div class="mk-row"><span>'+(fin?'🏁 Fin':'⏱ En ruta')+'</span><b>'+(fin?(fin.horaSrv||'—'):(enRuta||'—'))+'</b></div>';
+      html+='<div class="mk-row"><span>🟢 Ingreso</span><b>'+(ini.horaSrv||'—')+'</b></div>';
+      html+='<div class="mk-row"><span>👥 Con vendedor</span><b>'+(horaConv||'<span style="color:#D97706">pendiente</span>')+'</b></div>';
+      html+='<div class="mk-row"><span>🏁 Salida</span><b>'+(fin?(fin.horaSrv||'—'):'—')+'</b></div>';
+      html+='<div class="mk-row" style="border-top:1px solid var(--border);margin-top:4px;padding-top:6px"><span>⏱ Total c/vendedor</span><b style="color:var(--blue)">'+(totalConVend||'—')+'</b></div>';
       html+='</div>';
       html+='<button class="mk-btn" onclick="event.stopPropagation();irStatusDayDe(\''+u+'\')">🗺️ Ver recorrido</button>';
       html+='</div>';
