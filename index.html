@@ -1006,6 +1006,7 @@ var GAS_TTL = 60000; // reusar respuesta hasta 60s (velocidad)
 function gasGetReal(params, callback) {
   var url = getScriptURL();
   if (!url) { callback(null); return; }
+  params = params || {}; params.tk = "ASP-dcdc1d72bd13356a6f1d0e58eda80435";
   var qs = Object.keys(params).map(function(k) {
     return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
   }).join('&');
