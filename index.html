@@ -1878,7 +1878,7 @@ function renderStatusDay(){
   html+='<div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:4px">🗺️ Status Day — recorrido en tiempo real</div>';
   html+='<div style="font-size:12px;color:var(--t2);margin-bottom:14px">Ubicación y batería que envía el app cada vez que la promotora lo usa. La hora de ingreso/salida no condiciona los relevos.</div>';
   html+='<div class="sd-ctrl">';
-  html+='<select id="sd-user">'+opts+'</select>';
+  html+='<select id="sd-user" onchange="sdVer()">'+opts+'</select>';
   html+='<input type="date" id="sd-fecha" value="'+SD_FECHA+'">';
   html+='<button class="sd-btn" onclick="sdVer()">Ver recorrido</button>';
   html+='</div>';
@@ -1897,6 +1897,10 @@ function sdVer(){
 function sdCargar(){
   var out=document.getElementById('sd-out');
   if(out) out.innerHTML='<div class="loading"><div class="spinner"></div>Cargando recorrido de '+SD_USER+'…</div>';
+  // Limpiar datos de la promotora anterior para que NUNCA se muestre un recorrido equivocado
+  SD_MARCAS=[]; SD_UBIC=[];
+  // Status Day es tiempo real: no usar caché (traer siempre lo más reciente)
+  try{ _gasCache = {}; }catch(e){}
   if(MODO_DATOS==='DEMO'){
     SD_MARCAS=generarMarcaDemo([SD_FECHA]).filter(function(m){return m.usuario===SD_USER;});
     SD_UBIC=generarUbicDemo(SD_USER,SD_FECHA);
