@@ -1781,19 +1781,28 @@ function renderMarcaciones(){
     var sup = supDe(u);
     if(ini){
       var lu = ultimaUbicDe(u);
-      var horaUlt = lu ? lu.hora : (fin?fin.horaSrv:ini.horaSrv);
-      var enRuta = horasEntre(ini.horaSrv, fin?fin.horaSrv:horaUlt);
+      // Hora de cierre para los cálculos:
+      //  - Jornada cerrada (tiene FIN) → hora de salida
+      //  - Jornada abierta y es HOY → hora actual (cuenta en tiempo real)
+      //  - Jornada abierta pero fecha pasada → última ubicación reportada
+      var _esHoy = (FECHA_HASTA === hoy());
+      function _ahora(){ var d=new Date(); return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)+':'+('0'+d.getSeconds()).slice(-2); }
+      var horaUlt = lu ? lu.hora : ini.horaSrv;
+      var horaCierre = fin ? fin.horaSrv : (_esHoy ? _ahora() : horaUlt);
+      var enRuta = horasEntre(ini.horaSrv, horaCierre);
       var conv = porUser[u] && porUser[u].conv;
       // Hora de "con vendedor": si marcó CONVEND úsala; si inició directo con vendedor, es la de inicio
       var horaConv = conv ? conv.horaSrv : ((ini.vendedor && ini.vendedor.trim() && ini.vendedor.indexOf('confirmar')<0) ? ini.horaSrv : null);
-      // Total con vendedor: desde que estuvo con vendedor hasta el fin (o última ubicación)
-      var totalConVend = horaConv ? horasEntre(horaConv, fin?fin.horaSrv:horaUlt) : null;
+      // Total con vendedor: desde que estuvo con vendedor hasta el cierre (fin, ahora, o última ubic)
+      var totalConVend = horaConv ? horasEntre(horaConv, horaCierre) : null;
+      // ¿Inició directo con vendedor? (ingreso y con-vendedor son la misma marca)
+      var iniConVend = horaConv && !conv;
       html+='<div class="mk-card ok" onclick="irStatusDayDe(\''+u+'\')" title="Ver recorrido de '+u+'">';
       html+='<div class="mk-head"><div class="mk-av" style="background:'+colUsr(u)+'">'+inic(u)+'</div><div><div class="mk-nm" style="padding-left:0">'+u+'</div>'+(sup?'<div class="mk-sup" style="padding-left:0">'+sup+'</div>':'')+'</div></div>';
       html+='<div class="mk-st">'+(fin?'✓ Jornada cerrada':(horaConv?'<span class="mk-live"></span> Con vendedor · '+enRuta:'<span class="mk-live" style="background:#D97706"></span> Solo(a) · '+enRuta))+'</div>';
       html+='<div class="mk-rows">';
       html+='<div class="mk-row"><span>🟢 Ingreso</span><b>'+(ini.horaSrv||'—')+'</b></div>';
-      html+='<div class="mk-row"><span>👥 Con vendedor</span><b>'+(horaConv||'<span style="color:#D97706">pendiente</span>')+'</b></div>';
+      html+='<div class="mk-row"><span>👥 Con vendedor</span><b>'+(horaConv?(horaConv+(iniConVend?' <span style="color:#94A3B8;font-weight:400">(al inicio)</span>':'')):'<span style="color:#D97706">pendiente</span>')+'</b></div>';
       html+='<div class="mk-row"><span>🏁 Salida</span><b>'+(fin?(fin.horaSrv||'—'):'—')+'</b></div>';
       html+='<div class="mk-row" style="border-top:1px solid var(--border);margin-top:4px;padding-top:6px"><span>⏱ Total c/vendedor</span><b style="color:var(--blue)">'+(totalConVend||'—')+'</b></div>';
       html+='</div>';
