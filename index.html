@@ -311,15 +311,36 @@ button{font-family:inherit;}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 @media (max-width:768px){
   .g2{grid-template-columns:1fr;}
-  .topbar{padding:12px 14px;}.topbar-sub{display:none;}
-  .filters{padding:10px 14px;top:64px;}
-  .tabs{padding:0 14px;top:auto;}
-  .content{padding:14px;}
-  .hero-amount{font-size:30px;}.hero-narr{font-size:13px;}
-  .sec{padding:14px;}.kpi{padding:12px;}.kpi-val{font-size:20px;}
+  .topbar{padding:10px 12px;}.topbar-sub{display:none;}
+  .topbar-name{font-size:12.5px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .filters{padding:10px 12px;top:60px;flex-wrap:wrap;gap:8px;}
+  .tabs{padding:0 10px;top:auto;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap;}
+  .tab{flex-shrink:0;}
+  .content{padding:12px;}
+  .hero-amount{font-size:28px;}.hero-narr{font-size:13px;}
+  .sec{padding:13px;}.kpi{padding:12px;}.kpi-val{font-size:20px;}
   .tbl{font-size:11.5px;}.tbl td,.tbl th{padding:7px 6px;}
-  .filt-sel{min-width:120px;font-size:11px;}
+  .filt-sel{min-width:0;flex:1 1 46%;font-size:12px;}
+  .kpis{grid-template-columns:1fr 1fr;gap:8px;}
+  .mk-grid{grid-template-columns:1fr;gap:10px;}
+  .detail-grid,.mentions,.cau-detail-grid{grid-template-columns:1fr;}
+  /* Mapa general: apilar mapa arriba, lista abajo */
+  #mg-map{height:340px!important;min-width:0!important;flex:1 1 100%!important;}
+  #mg-list{width:100%!important;max-height:200px!important;}
+  /* Status day: mapa full ancho */
+  .sd-grid{grid-template-columns:1fr;}
+  .auto-chip{font-size:10px;padding:4px 8px;margin-right:4px;}
+  .rango-btns{flex-wrap:wrap;}
 }
+@media (max-width:420px){
+  .kpis{grid-template-columns:1fr;}
+  .topbar-r{gap:6px;}
+  .btn-icon{padding:6px 8px;}
+}
+
+.auto-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#059669;background:#ECFDF5;border:1px solid #A7F3D0;padding:5px 11px;border-radius:20px;font-weight:600;margin-right:8px;white-space:nowrap}
+.auto-dot{width:7px;height:7px;border-radius:50%;background:#059669;display:inline-block;animation:autopulse 1.6s ease-in-out infinite}
+@keyframes autopulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
 </style>
 </head>
 <body>
@@ -362,7 +383,8 @@ button{font-family:inherit;}
       </div>
     </div>
     <div class="topbar-r">
-      <button class="btn-icon" onclick="recargar()" title="Recargar">↻</button>
+      <span id="auto-chip" class="auto-chip"><span class="auto-dot"></span> Actualizado hace 0s</span>
+      <button class="btn-icon" onclick="recargar()" title="Recargar ahora">↻</button>
       <button class="btn-icon" onclick="abrirConfigURL()" title="Configurar conexión GAS">⚙</button>
       <button class="btn-icon" onclick="logout()" title="Cerrar sesión">⎋</button>
     </div>
@@ -757,6 +779,7 @@ var TABS_CONFIG = [
   {id:"geo", lbl:"Geográfico", ico:"📍"},
   {id:"asistencia", lbl:"Días relevados", ico:"✅"},
   {id:"marcaciones", lbl:"Marcaciones", ico:"📍"},
+  {id:"mapageneral", lbl:"Mapa general", ico:"🌎"},
   {id:"statusday", lbl:"Status Day", ico:"🗺️"},
   {id:"conclusiones", lbl:"Conclusiones", ico:"📝"}
 ];
@@ -767,6 +790,33 @@ var TABS_CONFIG = [
 function fmt(n){return Number(n||0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function fmtN(n){return Number(n||0).toLocaleString('es-PE');}
 function hoy(){var h=new Date();return h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0')+'-'+String(h.getDate()).padStart(2,'0');}
+
+// Offset entre la hora del servidor (Lima) y el reloj de este PC, para calcular tiempos exactos
+var SRV_OFFSET_MS = 0;
+function sincronizarHoraServidor(){
+  gasGetReal({accion:'hora_servidor'}, function(r){
+    if(r && r.status==='ok' && r.iso){
+      var srv = new Date(r.iso).getTime();
+      SRV_OFFSET_MS = srv - Date.now();
+    }
+  });
+}
+sincronizarHoraServidor();
+setInterval(sincronizarHoraServidor, 5*60*1000);
+// Hora actual REAL (según servidor) en formato HH:MM:SS
+function ahoraSrv(){
+  var d = new Date(Date.now() + SRV_OFFSET_MS);
+  return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)+':'+('0'+d.getSeconds()).slice(-2);
+}
+// Tiempo transcurrido entre dos horas HH:MM:SS. Si el fin es anterior al inicio (desfase mínimo),
+// devuelve 0h 00m en vez de saltar a 23h 59m. NO cruza medianoche (una jornada no lo hace).
+function elapsedHM(h1,h2){
+  function s(h){var p=String(h||'').split(':');return (parseInt(p[0],10)||0)*3600+(parseInt(p[1],10)||0)*60+(parseInt(p[2],10)||0);}
+  if(!h1||!h2) return '';
+  var d=s(h2)-s(h1); if(d<0) d=0;
+  var hh=Math.floor(d/3600), mm=Math.floor((d%3600)/60);
+  return hh+'h '+('0'+mm).slice(-2)+'m';
+}
 function fmtFecha(f){if(!f)return'';var p=f.split('-');var dias=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];var meses=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Set','Oct','Nov','Dic'];var dt=new Date(f+'T12:00:00');return dias[dt.getDay()]+' '+parseInt(p[2])+' '+meses[parseInt(p[1])-1]+' '+p[0];}
 
 // ════════════════════════════════════════════════════════
@@ -846,7 +896,7 @@ function renderTabs() {
 var MODULOS = [
   {id:'ventas',       ico:'📊', lbl:'Ventas',       tabs:['resumen','causales','productos']},
   {id:'stock',        ico:'📦', lbl:'Stock',        tabs:['stock_det','stock_res']},
-  {id:'personal',     ico:'👣', lbl:'Personal',     tabs:['marcaciones','statusday','asistencia']},
+  {id:'personal',     ico:'👣', lbl:'Personal',     tabs:['mapageneral','marcaciones','statusday','asistencia']},
   {id:'geografia',    ico:'📍', lbl:'Geografía',    tabs:['geo']},
   {id:'conclusiones', ico:'📝', lbl:'Conclusiones', tabs:['conclusiones']}
 ];
@@ -976,7 +1026,28 @@ function fmtRango() {
 }
 // Clave única para localStorage por rango
 function rangoKey() { return FECHA_DESDE + '_' + FECHA_HASTA; }
-function recargar(){ _gasCache = {}; cargarData(); }
+function recargar(){ _gasCache = {}; cargarData(); marcarActualizado(); }
+
+// ─── AUTO-ACTUALIZACIÓN cada 30s (solo cuando la pestaña del navegador está visible) ───
+var _ultAct = Date.now();
+function marcarActualizado(){ _ultAct = Date.now(); actualizarChipHora(); }
+function actualizarChipHora(){
+  var el = document.getElementById('auto-chip');
+  if(!el) return;
+  var seg = Math.round((Date.now()-_ultAct)/1000);
+  var txt = seg < 60 ? ('hace '+seg+'s') : ('hace '+Math.floor(seg/60)+'m');
+  el.innerHTML = '<span class="auto-dot"></span> Actualizado ' + txt;
+}
+function autoRefrescar(){
+  // No refrescar si la pestaña del navegador no está visible (ahorra datos)
+  if(document.hidden) return;
+  // No refrescar mientras se ve el Status Day en modo mapa (para no interrumpir la lectura del recorrido)
+  _gasCache = {};
+  cargarData();
+  marcarActualizado();
+}
+setInterval(autoRefrescar, 30000);      // cada 30 segundos
+setInterval(actualizarChipHora, 1000);  // actualizar el texto "hace X" cada segundo
 
 // ════════════════════════════════════════════════════════
 // CONEXION CON EL GAS REAL
@@ -1786,15 +1857,14 @@ function renderMarcaciones(){
       //  - Jornada abierta y es HOY → hora actual (cuenta en tiempo real)
       //  - Jornada abierta pero fecha pasada → última ubicación reportada
       var _esHoy = (FECHA_HASTA === hoy());
-      function _ahora(){ var d=new Date(); return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)+':'+('0'+d.getSeconds()).slice(-2); }
       var horaUlt = lu ? lu.hora : ini.horaSrv;
-      var horaCierre = fin ? fin.horaSrv : (_esHoy ? _ahora() : horaUlt);
-      var enRuta = horasEntre(ini.horaSrv, horaCierre);
+      var horaCierre = fin ? fin.horaSrv : (_esHoy ? ahoraSrv() : horaUlt);
+      var enRuta = elapsedHM(ini.horaSrv, horaCierre);
       var conv = porUser[u] && porUser[u].conv;
       // Hora de "con vendedor": si marcó CONVEND úsala; si inició directo con vendedor, es la de inicio
       var horaConv = conv ? conv.horaSrv : ((ini.vendedor && ini.vendedor.trim() && ini.vendedor.indexOf('confirmar')<0) ? ini.horaSrv : null);
       // Total con vendedor: desde que estuvo con vendedor hasta el cierre (fin, ahora, o última ubic)
-      var totalConVend = horaConv ? horasEntre(horaConv, horaCierre) : null;
+      var totalConVend = horaConv ? elapsedHM(horaConv, horaCierre) : null;
       // ¿Inició directo con vendedor? (ingreso y con-vendedor son la misma marca)
       var iniConVend = horaConv && !conv;
       html+='<div class="mk-card ok" onclick="irStatusDayDe(\''+u+'\')" title="Ver recorrido de '+u+'">';
@@ -1877,6 +1947,73 @@ function sdHaversine(a,b){
   var s=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
   return R*2*Math.atan2(Math.sqrt(s),Math.sqrt(1-s));
 }
+var MG_MAP=null, MG_LAYER=null;
+function renderMapaGeneral(){
+  var cont=document.getElementById('content'); if(!cont) return;
+  cont.innerHTML=''
+    +'<div class="sec"><div class="sec-hd"><div class="sec-ttl"><div class="sec-ttl-ico">🌎</div>Mapa general — equipo en tiempo real</div></div>'
+    +'<div style="padding:0 4px 8px;color:var(--t2);font-size:13px">Cada pin es la última ubicación de una promotora activa. Haz clic en un pin (o en su nombre en la lista) para ver su recorrido del día.</div>'
+    +'<div style="display:flex;gap:12px;flex-wrap:wrap">'
+    +'<div id="mg-map" style="flex:1;min-width:280px;height:520px;border-radius:14px;overflow:hidden;border:1px solid var(--border)"></div>'
+    +'<div id="mg-list" style="width:230px;max-height:520px;overflow-y:auto"></div>'
+    +'</div></div>';
+  // Asegurar datos de marcaciones/ubicaciones cargados
+  var proms = SESION.role==='jefe' ? TODOS_PROMS.slice() : (SUP_MAP[SESION.user]||[]);
+  var key = FECHA_DESDE+'|'+FECHA_HASTA+'|'+proms.join(',');
+  if(key!==_marcaKey || !MARCA_DATA.length){
+    cargarMarcaciones(diasArrayRango(), proms.join(','));
+    setTimeout(function(){ if(TAB_ACTUAL==='mapageneral') pintarMapaGeneral(); }, 1400);
+  }
+  ensureLeaflet(function(){ pintarMapaGeneral(); });
+}
+function pintarMapaGeneral(){
+  if(TAB_ACTUAL!=='mapageneral') return;
+  var el=document.getElementById('mg-map'); if(!el || typeof L==='undefined') return;
+  function okPeru(la,ln){ return !isNaN(la)&&!isNaN(ln)&&la<=1&&la>=-19.5&&ln<=-68&&ln>=-82; }
+  // Última ubicación por cada promotora que marcó inicio hoy
+  var proms = SESION.role==='jefe' ? TODOS_PROMS.slice() : (SUP_MAP[SESION.user]||[]);
+  var activos=[];
+  proms.forEach(function(u){
+    var iniA = MARCA_DATA.filter(function(m){return m.usuario===u && m.tipo!=='FIN';});
+    if(!iniA.length) return; // no marcó inicio
+    var lu = ultimaUbicDe(u);
+    var la, ln, hora;
+    if(lu && okPeru(parseFloat(lu.lat),parseFloat(lu.lng))){ la=parseFloat(lu.lat); ln=parseFloat(lu.lng); hora=lu.hora; }
+    else {
+      var im=iniA[0]; la=parseFloat(im.lat); ln=parseFloat(im.lng); hora=im.horaSrv;
+      if(!okPeru(la,ln)) return;
+    }
+    var fin = MARCA_DATA.filter(function(m){return m.usuario===u && m.tipo==='FIN';})[0];
+    activos.push({u:u, lat:la, lng:ln, hora:hora, cerrado:!!fin});
+  });
+  // (Re)crear mapa
+  if(MG_MAP){ try{ MG_MAP.remove(); }catch(e){} MG_MAP=null; }
+  MG_MAP=L.map('mg-map',{zoomControl:true});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ maxZoom:19, subdomains:'abc', attribution:'&copy; OpenStreetMap' }).addTo(MG_MAP);
+  var lista=document.getElementById('mg-list'); var lh='';
+  if(!activos.length){
+    MG_MAP.setView([-9.2,-75.0], 5); // Perú completo
+    if(lista) lista.innerHTML='<div style="padding:16px;color:var(--t2);font-size:13px;text-align:center">Ninguna promotora con ubicación válida hoy.</div>';
+    setTimeout(function(){ MG_MAP.invalidateSize(); },200);
+    return;
+  }
+  var pts=[];
+  activos.forEach(function(a){
+    var col = a.cerrado ? '#64748B' : '#0EA5F9';
+    var ico=L.divIcon({className:'mg-pin', html:'<div style="background:'+col+';color:#fff;padding:3px 8px;border-radius:14px;border:2px solid #fff;font-size:11px;font-weight:800;box-shadow:0 2px 5px rgba(0,0,0,.35);white-space:nowrap">'+a.u+'</div>', iconSize:[10,10], iconAnchor:[5,5]});
+    var mk=L.marker([a.lat,a.lng],{icon:ico}).addTo(MG_MAP);
+    mk.bindPopup('<b>'+a.u+'</b><br>'+(a.cerrado?'Jornada cerrada':'En ruta')+'<br>Últ.: '+a.hora+'<br><a href="#" onclick="irStatusDayDe(\''+a.u+'\');return false;">Ver recorrido →</a>');
+    mk.on('click', function(){ mk.openPopup(); });
+    pts.push([a.lat,a.lng]);
+    lh+='<div onclick="irStatusDayDe(\''+a.u+'\')" style="cursor:pointer;padding:9px 11px;border:1px solid var(--border);border-radius:10px;margin-bottom:7px;display:flex;align-items:center;gap:8px;background:#fff">'
+      +'<span style="width:9px;height:9px;border-radius:50%;background:'+col+';flex-shrink:0"></span>'
+      +'<div><div style="font-weight:700;font-size:12px;color:var(--text)">'+a.u+'</div><div style="font-size:11px;color:var(--t2)">'+(a.cerrado?'Cerrada':'En ruta')+' · '+a.hora+'</div></div></div>';
+  });
+  if(lista) lista.innerHTML=lh;
+  try{ MG_MAP.fitBounds(L.latLngBounds(pts),{padding:[40,40], maxZoom:14}); }catch(e){ MG_MAP.setView(pts[0],13); }
+  setTimeout(function(){ MG_MAP.invalidateSize(); },200);
+}
+
 function renderStatusDay(){
   var cont=document.getElementById('content');
   var proms=sdProms();
@@ -2402,6 +2539,7 @@ function renderContent() {
   else if (TAB_ACTUAL === 'geo') renderGeo();
   else if (TAB_ACTUAL === 'asistencia') irAsistencia();
   else if (TAB_ACTUAL === 'marcaciones') irMarcaciones();
+  else if (TAB_ACTUAL === 'mapageneral') renderMapaGeneral();
   else if (TAB_ACTUAL === 'statusday') renderStatusDay();
   else if (TAB_ACTUAL === 'conclusiones') renderConclusiones();
 }
