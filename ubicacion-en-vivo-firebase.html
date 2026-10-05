@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<title>Aspery · Ubicación en Vivo (Firebase)</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════
+   Aspery · Ubicación en Vivo — leyendo de FIREBASE (rápido)
+   Paleta: azul marino #051D3A · azul brillante #0EA5F9
+   ═══════════════════════════════════════════════════════════ */
+:root{
+  --navy:#051D3A; --navy2:#0A2A4E; --blue:#0EA5F9; --blue-d:#0369A1;
+  --green:#16A34A; --amber:#F59E0B; --gray:#64748B; --red:#DC2626;
+  --bg:#F1F5F9; --card:#FFFFFF; --line:#E2E8F0; --t1:#0F172A; --t2:#475569; --t3:#94A3B8;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t1);-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer;border:none}
+input{font-family:inherit}
+
+/* LOGIN */
+#login{position:fixed;inset:0;background:var(--navy);display:flex;align-items:center;justify-content:center;padding:20px;z-index:9999}
+#login .box{background:var(--card);border-radius:18px;padding:30px 26px;width:100%;max-width:360px;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+#login .logo{font-size:26px;font-weight:800;color:var(--navy);margin-bottom:4px}
+#login .logo b{color:var(--blue)}
+#login .sub{font-size:13px;color:var(--t2);margin-bottom:22px}
+#login label{font-size:12px;font-weight:600;color:var(--t2);display:block;margin-bottom:6px}
+#login input{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:10px;font-size:15px;margin-bottom:14px}
+#login input:focus{outline:none;border-color:var(--blue)}
+#login button{width:100%;padding:13px;background:var(--blue);color:#fff;font-size:15px;font-weight:700;border-radius:10px}
+#login .hint{font-size:11px;color:var(--t3);text-align:center;margin-top:14px;line-height:1.6}
+#login .err{font-size:12.5px;color:var(--red);min-height:16px;margin-bottom:8px;font-weight:600}
+
+/* APP */
+#app{display:none;min-height:100vh;flex-direction:column}
+header{background:var(--navy);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:500}
+header .brand{font-size:18px;font-weight:800;white-space:nowrap}
+header .brand b{color:var(--blue)}
+header .spacer{flex:1}
+header .live{display:flex;align-items:center;gap:7px;font-size:12px;color:#CBD5E1;white-space:nowrap}
+header .dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(22,163,74,.6);animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(22,163,74,.6)}70%{box-shadow:0 0 0 7px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}
+header .dot.off{background:var(--gray);animation:none}
+header input[type=date]{background:#0A2A4E;border:1px solid #1E3A5F;color:#fff;border-radius:8px;padding:7px 10px;font-size:13px}
+header .who{font-size:12px;color:#CBD5E1}
+header .out{background:#1E3A5F;color:#fff;padding:7px 11px;border-radius:8px;font-size:12px;font-weight:600}
+header .speed{font-size:11px;color:#4ade80;font-weight:700}
+
+.stats{display:flex;gap:10px;padding:12px 16px;flex-wrap:wrap;background:var(--card);border-bottom:1px solid var(--line)}
+.stat{flex:1;min-width:90px;background:var(--bg);border-radius:12px;padding:10px 12px;border-left:4px solid var(--gray)}
+.stat .n{font-size:22px;font-weight:800;line-height:1}
+.stat .l{font-size:11px;color:var(--t2);font-weight:600;margin-top:4px}
+.stat.g{border-color:var(--green)} .stat.g .n{color:var(--green)}
+.stat.a{border-color:var(--amber)} .stat.a .n{color:var(--amber)}
+.stat.b{border-color:var(--blue)} .stat.b .n{color:var(--blue-d)}
+.stat.x{border-color:var(--gray)} .stat.x .n{color:var(--gray)}
+
+.main{flex:1;display:flex;gap:0;min-height:0}
+.list{width:340px;max-width:40%;overflow-y:auto;background:var(--card);border-right:1px solid var(--line)}
+.list .ltitle{font-size:12px;font-weight:700;color:var(--t2);padding:12px 16px 6px;text-transform:uppercase;letter-spacing:.04em}
+.row{padding:12px 16px;border-bottom:1px solid var(--line);cursor:pointer;transition:background .12s;border-left:4px solid transparent}
+.row:hover{background:#F8FAFC}
+.row.sel{background:#EFF6FF;border-left-color:var(--blue)}
+.row .top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.row .nm{font-weight:700;font-size:14px}
+.row .bdg{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap}
+.bdg.green{background:#DCFCE7;color:#15803D} .bdg.amber{background:#FEF3C7;color:#B45309}
+.bdg.gray{background:#E2E8F0;color:#475569} .bdg.dark{background:#334155;color:#fff}
+.row .meta{font-size:12px;color:var(--t2);margin-top:5px;line-height:1.5}
+.row .meta b{color:var(--t1);font-weight:600}
+#map{flex:1;min-height:300px}
+.empty{padding:40px 20px;text-align:center;color:var(--t3);font-size:13px}
+.loading{padding:40px 20px;text-align:center;color:var(--t3);font-size:13px}
+
+.foot{font-size:11px;color:var(--t3);text-align:center;padding:9px}
+.pin{width:16px;height:16px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.leaflet-popup-content{font-family:'Inter',sans-serif;font-size:12.5px}
+.leaflet-popup-content strong{color:var(--navy)}
+
+@media(max-width:720px){
+  .main{flex-direction:column}
+  .list{width:100%;max-width:100%;max-height:42vh;border-right:none;border-bottom:1px solid var(--line)}
+  #map{min-height:46vh}
+  header .brand{font-size:16px}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login">
+  <div class="box">
+    <div class="logo">Asper<b>y</b> ↗</div>
+    <div class="sub">Ubicación en vivo · Firebase</div>
+    <div class="err" id="lg-err"></div>
+    <label>Usuario</label>
+    <input id="lg-user" placeholder="JEFECANAL, SUPLIMA…" autocomplete="username" style="text-transform:uppercase"/>
+    <label>Contraseña</label>
+    <input id="lg-pass" type="password" placeholder="••••••" autocomplete="current-password"/>
+    <button onclick="entrar()">Entrar</button>
+    <div class="hint">Jefe de canal ve todo el país · cada supervisor ve a su equipo.</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <header>
+    <div class="brand">Asper<b>y</b> · En Vivo</div>
+    <input type="date" id="fecha" onchange="cambiarFecha()"/>
+    <div class="live"><span class="dot" id="live-dot"></span><span id="live-txt">en vivo</span></div>
+    <span class="speed" id="speed"></span>
+    <div class="spacer"></div>
+    <div class="who" id="who"></div>
+    <button class="out" onclick="salir()">Salir</button>
+  </header>
+
+  <div class="stats">
+    <div class="stat b"><div class="n" id="s-act">0</div><div class="l">En ruta ahora</div></div>
+    <div class="stat g"><div class="n" id="s-ven">0</div><div class="l">Con vendedor</div></div>
+    <div class="stat x"><div class="n" id="s-fin">0</div><div class="l">Cerraron ruta</div></div>
+    <div class="stat"><div class="n" id="s-sin">0</div><div class="l">Sin iniciar</div></div>
+  </div>
+
+  <div class="main">
+    <div class="list">
+      <div class="ltitle" id="list-title">Equipo</div>
+      <div id="list-body"><div class="loading">Cargando…</div></div>
+    </div>
+    <div id="map"></div>
+  </div>
+
+  <div class="foot">Aspery · Desarrollado por SPG · Datos desde Firebase · <span id="foot-upd"></span></div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   CONFIGURACIÓN
+   ═══════════════════════════════════════════════════════════════════════ */
+var FB_PROJECT = 'aspery-8780d';
+var FB_KEY     = 'AIzaSyCabjIjVRCXb_BlNTXi_QHQw9yNhBV6IIE';
+var FB_BASE    = 'https://firestore.googleapis.com/v1/projects/' + FB_PROJECT + '/databases/(default)/documents';
+var FB_QUERY   = 'https://firestore.googleapis.com/v1/projects/' + FB_PROJECT + '/databases/(default)/documents:runQuery';
+var REFRESH_MS = 30000;   // auto-refresco solo en HOY (30s)
+
+var LOGIN = {
+  'JEFECANAL'  : { pass:'JEFE123$',  nombre:'Sebastian Pereyra', equipo:'TODOS' },
+  'SUPLIMA'    : { pass:'SUPER123$', nombre:'Supervisor Lima',    equipo:['PROMLIM1','PROMLIM3','PROMLIM5','PROMLIM6'] },
+  'SUPAREQUIPA': { pass:'SUPER123$', nombre:'Supervisor Arequipa',equipo:['PROMICA','PROMAQP','PROMCUS','PROMTAC'] },
+  'SUPHUANCAYO': { pass:'SUPER123$', nombre:'Supervisor Huancayo',equipo:['PROMTPP','PROMHYO'] },
+  'SUPPIURA'   : { pass:'SUPER123$', nombre:'Supervisor Piura',   equipo:['PROMTRUX','PROMCIX','PROMPIU'] },
+  'USUARIOPRUEBA':{pass:'SUPER123$', nombre:'Usuario Prueba',     equipo:['PROMAQP','PROMLIM1'] }
+};
+var TODAS = ['PROMLIM1','PROMLIM3','PROMLIM5','PROMLIM6','PROMAQP','PROMCUS','PROMTAC','PROMHYO','PROMTPP','PROMCIX','PROMTRUX','PROMICA','PROMPIU'];
+var NOMBRES = {
+  PROMLIM1:'PROMLIM1', PROMLIM3:'PROMLIM3', PROMLIM5:'PROMLIM5', PROMLIM6:'PROMLIM6',
+  PROMAQP:'PROMAQP', PROMCUS:'PROMCUS', PROMTAC:'PROMTAC', PROMHYO:'PROMHYO',
+  PROMTPP:'PROMTPP', PROMCIX:'PROMCIX', PROMTRUX:'PROMTRUX', PROMICA:'PROMICA', PROMPIU:'PROMPIU'
+};
+
+/* ═══════════════════════════════════════════════════════════════════════
+   LECTURA DE FIREBASE (consulta solo lo necesario = rápido)
+   Trae ubicaciones y marcaciones de UN día para el equipo, en una query.
+   ═══════════════════════════════════════════════════════════════════════ */
+function fbVal(f){
+  if(!f) return '';
+  if(f.stringValue!==undefined) return f.stringValue;
+  if(f.doubleValue!==undefined) return f.doubleValue;
+  if(f.integerValue!==undefined) return Number(f.integerValue);
+  if(f.timestampValue!==undefined) return f.timestampValue;
+  if(f.nullValue!==undefined) return null;
+  return '';
+}
+function docFields(doc){
+  var o={}; var f=doc.fields||{};
+  Object.keys(f).forEach(function(k){ o[k]=fbVal(f[k]); });
+  return o;
+}
+// Consulta una colección por fecha (solo filtro = sin índice extra), se ordena por 'orden' aquí.
+function fbConsultar(coll, fecha, cb){
+  var q = {
+    structuredQuery: {
+      from: [{ collectionId: coll }],
+      where: { fieldFilter: { field:{fieldPath:'fecha'}, op:'EQUAL', value:{stringValue:fecha} } },
+      limit: 5000
+    }
+  };
+  fetch(FB_QUERY + '?key=' + FB_KEY, {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(q)
+  }).then(function(r){ return r.json(); }).then(function(rows){
+    var out=[];
+    (rows||[]).forEach(function(x){ if(x.document) out.push(docFields(x.document)); });
+    out.sort(function(a,b){ return Number(a.orden||0) - Number(b.orden||0); }); // orden cronológico
+    cb(out);
+  }).catch(function(){ cb([]); });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   LÓGICA DE LA PÁGINA
+   ═══════════════════════════════════════════════════════════════════════ */
+var SESION=null, MAPA=null, CAPA=null, DATOS={}, SELECCION=null, timerRefresh=null;
+
+function hoyISO(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function nom(u){ return NOMBRES[u]||u; }
+function enPeru(lat,lng){ return lat<=-0.03 && lat>=-18.6 && lng>=-81.5 && lng<=-68.5; }
+
+function entrar(){
+  var u=(document.getElementById('lg-user').value||'').trim().toUpperCase();
+  var p=document.getElementById('lg-pass').value||'';
+  var cfg=LOGIN[u];
+  if(!cfg || cfg.pass!==p){ document.getElementById('lg-err').textContent='Usuario o contraseña incorrectos.'; return; }
+  var equipo=(cfg.equipo==='TODOS')?TODAS.slice():cfg.equipo.slice();
+  SESION={user:u, nombre:cfg.nombre, equipo:equipo};
+  try{ localStorage.setItem('aspery_vivo_fb', JSON.stringify(SESION)); }catch(e){}
+  iniciarApp();
+}
+function salir(){ try{ localStorage.removeItem('aspery_vivo_fb'); }catch(e){} if(timerRefresh) clearInterval(timerRefresh); SESION=null; location.reload(); }
+
+function iniciarApp(){
+  document.getElementById('login').style.display='none';
+  document.getElementById('app').style.display='flex';
+  document.getElementById('who').textContent=SESION.nombre;
+  document.getElementById('fecha').value=hoyISO();
+  document.getElementById('fecha').max=hoyISO();
+  if(!MAPA){
+    MAPA=L.map('map',{zoomControl:true}).setView([-9.19,-75.0],5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,subdomains:'abc',attribution:'&copy; OpenStreetMap'}).addTo(MAPA);
+    CAPA=L.layerGroup().addTo(MAPA);
+  }
+  cargar();
+  programarRefresco();
+}
+
+function cambiarFecha(){ SELECCION=null; cargar(); programarRefresco(); }
+
+function programarRefresco(){
+  if(timerRefresh) clearInterval(timerRefresh);
+  var esHoy=document.getElementById('fecha').value===hoyISO();
+  var dot=document.getElementById('live-dot'), txt=document.getElementById('live-txt');
+  if(esHoy){ dot.classList.remove('off'); txt.textContent='en vivo'; timerRefresh=setInterval(function(){ if(!document.hidden) cargar(); }, REFRESH_MS); }
+  else { dot.classList.add('off'); txt.textContent='día pasado'; }
+}
+
+function cargar(){
+  var fecha=document.getElementById('fecha').value;
+  var t0=performance.now();
+  var res={marcas:null, ubics:null};
+  function listo(){
+    if(res.marcas!==null && res.ubics!==null){
+      procesar(res.marcas, res.ubics);
+      render();
+      var ms=Math.round(performance.now()-t0);
+      document.getElementById('speed').textContent='⚡ '+ms+' ms';
+      document.getElementById('foot-upd').textContent='actualizado '+new Date().toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'});
+    }
+  }
+  fbConsultar('marcaciones', fecha, function(r){ res.marcas=r; listo(); });
+  fbConsultar('ubicaciones', fecha, function(r){ res.ubics=r; listo(); });
+}
+
+function procesar(marcas, ubics){
+  DATOS={};
+  SESION.equipo.forEach(function(u){ DATOS[u]={estado:'sin', ultHora:'', ultLat:null, ultLng:null, ubicTxt:'', dist:'', trail:[], _um:0}; });
+  // marcaciones → estado (la más reciente por 'orden')
+  marcas.forEach(function(m){
+    var u=String(m.usuario||'').trim(); if(!DATOS[u]) return;
+    var d=DATOS[u]; var ord=Number(m.orden||0);
+    if(ord>=d._um){
+      d._um=ord;
+      var tipo=String(m.tipo||'').toUpperCase();
+      d.estado=(tipo==='FIN')?'fin':(tipo==='CONVEND'?'conv':'sola');
+      d.dist=m.dist||'';
+      var la=parseFloat(m.lat), ln=parseFloat(m.lng);
+      if(!isNaN(la)&&!isNaN(ln)&&enPeru(la,ln)){ d.ultLat=la; d.ultLng=ln; d.ultHora=m.hora||''; d.ubicTxt=m.ubic||''; }
+    }
+  });
+  // ubicaciones → recorrido + última posición (ya vienen ordenadas por 'orden')
+  ubics.forEach(function(p){
+    var u=String(p.usuario||'').trim(); if(!DATOS[u]) return;
+    var la=parseFloat(p.lat), ln=parseFloat(p.lng);
+    if(isNaN(la)||isNaN(ln)||!enPeru(la,ln)) return;
+    DATOS[u].trail.push([la,ln,p.hora||'']);
+  });
+  Object.keys(DATOS).forEach(function(u){
+    var d=DATOS[u];
+    if(d.trail.length){ var last=d.trail[d.trail.length-1]; d.ultLat=last[0]; d.ultLng=last[1]; if(last[2]) d.ultHora=last[2]; }
+  });
+}
+
+function badge(est){
+  if(est==='conv') return '<span class="bdg green">Con vendedor</span>';
+  if(est==='sola') return '<span class="bdg amber">En ruta (sola)</span>';
+  if(est==='fin')  return '<span class="bdg dark">Cerró ruta</span>';
+  return '<span class="bdg gray">Sin iniciar</span>';
+}
+var ORDEN={conv:0, sola:1, fin:2, sin:3};
+
+function render(){
+  var c={conv:0,sola:0,fin:0,sin:0};
+  SESION.equipo.forEach(function(u){ c[DATOS[u].estado]++; });
+  document.getElementById('s-act').textContent=c.sola+c.conv;
+  document.getElementById('s-ven').textContent=c.conv;
+  document.getElementById('s-fin').textContent=c.fin;
+  document.getElementById('s-sin').textContent=c.sin;
+
+  var users=SESION.equipo.slice().sort(function(a,b){ var da=ORDEN[DATOS[a].estado],db=ORDEN[DATOS[b].estado]; if(da!==db)return da-db; return nom(a)<nom(b)?-1:1; });
+  document.getElementById('list-title').textContent='Equipo · '+SESION.equipo.length+' promotoras';
+  var h='';
+  users.forEach(function(u){
+    var d=DATOS[u]; var sel=(u===SELECCION)?' sel':'';
+    h+='<div class="row'+sel+'" onclick="seleccionar(\''+u+'\')"><div class="top"><span class="nm">'+nom(u)+'</span>'+badge(d.estado)+'</div><div class="meta">';
+    if(d.estado==='sin'){ h+='Aún no marca inicio hoy.'; }
+    else {
+      if(d.ultHora) h+='Última señal: <b>'+d.ultHora+'</b><br>';
+      if(d.ubicTxt) h+='📍 '+d.ubicTxt+'<br>';
+      if(d.dist) h+='Distribuidora: <b>'+d.dist+'</b>';
+      if(d.trail.length) h+='<br>Puntos de recorrido: <b>'+d.trail.length+'</b>';
+    }
+    h+='</div></div>';
+  });
+  document.getElementById('list-body').innerHTML=h||'<div class="empty">Sin datos para este día.</div>';
+  pintarMapa();
+}
+
+function iconPin(color){ return L.divIcon({className:'', html:'<div class="pin" style="background:'+color+'"></div>', iconSize:[16,16], iconAnchor:[8,16]}); }
+function colorEst(est){ return est==='conv'?'#16A34A':est==='sola'?'#F59E0B':est==='fin'?'#64748B':'#CBD5E1'; }
+
+function pintarMapa(){
+  CAPA.clearLayers();
+  var pts=[];
+  SESION.equipo.forEach(function(u){
+    var d=DATOS[u]; if(d.ultLat==null) return;
+    var mk=L.marker([d.ultLat,d.ultLng],{icon:iconPin(colorEst(d.estado))}).addTo(CAPA);
+    mk.bindPopup('<strong>'+nom(u)+'</strong><br>'+(d.ultHora?('Última señal: '+d.ultHora+'<br>'):'')+(d.ubicTxt?('📍 '+d.ubicTxt):''));
+    mk.on('click',function(){ seleccionar(u); });
+    pts.push([d.ultLat,d.ultLng]);
+  });
+  if(SELECCION && DATOS[SELECCION] && DATOS[SELECCION].trail.length>1){
+    var tr=DATOS[SELECCION].trail.map(function(p){return [p[0],p[1]];});
+    L.polyline(tr,{color:'#0EA5F9',weight:3,opacity:.8}).addTo(CAPA);
+    tr.forEach(function(p,i){ L.circleMarker(p,{radius:4,color:'#0369A1',fillColor:'#0EA5F9',fillOpacity:1,weight:1}).addTo(CAPA).bindTooltip(String(i+1)); });
+    MAPA.fitBounds(L.latLngBounds(tr).pad(0.2));
+  } else if(pts.length){ MAPA.fitBounds(L.latLngBounds(pts).pad(0.3)); }
+}
+function seleccionar(u){ SELECCION=(SELECCION===u)?null:u; render(); }
+
+// Arranque
+(function(){
+  try{ var s=JSON.parse(localStorage.getItem('aspery_vivo_fb')||'null'); if(s&&s.user&&LOGIN[s.user]){ SESION=s; iniciarApp(); } }catch(e){}
+  ['lg-user','lg-pass'].forEach(function(id){ var el=document.getElementById(id); if(el) el.addEventListener('keydown',function(e){ if(e.key==='Enter') entrar(); }); });
+})();
+</script>
+</body>
+</html>
