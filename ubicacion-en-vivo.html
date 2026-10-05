@@ -291,8 +291,11 @@ function procesar(marcas, ubics){
     if(hora >= (d._ultMarcaHora||'')){   // nos quedamos con la marca más reciente
       d._ultMarcaHora = hora;
       var tipo = String(r[M.tipo]||'').toUpperCase();
-      d.estado = (tipo==='FIN') ? 'fin' : (tipo==='CONVEND' ? 'conv' : 'sola');
-      d.dist = String(r[M.dist]||''); d.vend = String(r[M.vend]||'');
+      var vendN = String(r[M.vend]||'').trim();
+      var tieneVend = vendN && !/esperando|por confirmar/i.test(vendN) && vendN.toUpperCase()!=='SOLA';
+      // Con vendedor si: corrigió a CONVEND, o inició directo con un vendedor real
+      d.estado = (tipo==='FIN') ? 'fin' : ((tipo==='CONVEND' || (tipo==='INICIO' && tieneVend)) ? 'conv' : 'sola');
+      d.dist = String(r[M.dist]||''); d.vend = vendN;
       var la=parseFloat(r[M.lat]), ln=parseFloat(r[M.lng]);
       if(!isNaN(la)&&!isNaN(ln)&&enPeru(la,ln)){ d.ultLat=la; d.ultLng=ln; d.ultHora=hora; d.ubicTxt=String(r[M.ubic]||''); }
     }
