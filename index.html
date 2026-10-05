@@ -85,6 +85,10 @@ button{font-family:inherit;}
 .dash{margin-left:64px}
 .side{position:fixed;left:0;top:0;bottom:0;width:64px;background:linear-gradient(180deg,#0EA5F9 0%,#083D5C 45%,#0F172A 100%);z-index:2000;overflow:hidden;transition:width .18s ease;box-shadow:2px 0 16px rgba(2,6,23,.22);display:flex;flex-direction:column;padding-top:8px}
 .side:hover{width:240px}
+.side.open{width:240px}
+.side.open .side-logo .tx,.side.open .side-item .lb,.side.open .side-foot .lb{opacity:1}
+.side-burger{color:#fff;font-size:20px;padding:6px 21px 10px;cursor:pointer;opacity:.9;flex-shrink:0}
+.side-burger:hover{opacity:1}
 .side-logo{display:flex;align-items:center;gap:12px;padding:12px 19px 18px;color:#fff;white-space:nowrap}
 .side-logo .lg{font-size:23px;flex-shrink:0}
 .side-logo .tx{font-weight:800;font-size:15px;opacity:0;transition:opacity .15s}
@@ -912,7 +916,8 @@ var MODULO_ACTUAL = 'ventas';
 
 function renderSide(){
   var el = document.getElementById('side'); if(!el) return;
-  var h = '<div class="side-logo"><span class="lg">🛡️</span><span class="tx">Seguimiento y Control</span></div>';
+  var h = '<div class="side-burger" onclick="toggleSide(event)" title="Abrir/cerrar menú">☰</div>';
+  h += '<div class="side-logo"><span class="lg">🛡️</span><span class="tx">Seguimiento y Control</span></div>';
   MODULOS.forEach(function(m){
     if(m.roles && (!SESION || m.roles.indexOf(SESION.role)<0)) return;  // módulos de jefe solo para el jefe
     h += '<div class="side-item'+(m.id===MODULO_ACTUAL?' on':'')+'" onclick="setModulo(\''+m.id+'\')" title="'+m.lbl+'"><span class="ic">'+m.ico+'</span><span class="lb">'+m.lbl+'</span></div>';
@@ -920,9 +925,14 @@ function renderSide(){
   h += '<div class="side-foot"><span class="lb">Desarrollado por SPG</span></div>';
   el.innerHTML = h;
 }
+function toggleSide(ev){
+  if(ev && ev.stopPropagation) ev.stopPropagation();
+  var s=document.getElementById('side'); if(s) s.classList.toggle('open');
+}
 function setModulo(id){
   var m = MODULOS.filter(function(x){return x.id===id;})[0]; if(!m) return;
   if(m.roles && (!SESION || m.roles.indexOf(SESION.role)<0)) return;  // bloquea acceso de supervisor a módulos de jefe
+  var s=document.getElementById('side'); if(s) s.classList.remove('open');  // al elegir, se cierra en móvil
   MODULO_ACTUAL = id;
   if(m.tabs.indexOf(TAB_ACTUAL) < 0) TAB_ACTUAL = m.tabs[0];
   renderSide(); renderTabs(); renderContent();
