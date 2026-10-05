@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Aspery Dash</title>
+<title>Seguimiento y Control Aspery</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -349,7 +349,7 @@ button{font-family:inherit;}
 <div id="screen-login" class="login-wrap">
   <div class="login-card">
     <div class="login-logo">📊</div>
-    <p class="login-title">Aspery Dash</p>
+    <p class="login-title">Seguimiento y Control Aspery</p>
     <p class="login-sub">Registro de ventas en tiempo real</p>
     <div class="login-err" id="login-err"></div>
     <div class="fld">
@@ -781,7 +781,11 @@ var TABS_CONFIG = [
   {id:"marcaciones", lbl:"Marcaciones", ico:"📍"},
   {id:"mapageneral", lbl:"Mapa general", ico:"🌎"},
   {id:"statusday", lbl:"Status Day", ico:"🗺️"},
-  {id:"conclusiones", lbl:"Conclusiones", ico:"📝"}
+  {id:"conclusiones", lbl:"Conclusiones", ico:"📝"},
+  {id:"apro_relevos", lbl:"Relevos", ico:"✋"},
+  {id:"apro_marcas", lbl:"Marcaciones", ico:"🔄"},
+  {id:"auditoria", lbl:"Auditoría", ico:"🧾"},
+  {id:"actividad", lbl:"Actividad sup.", ico:"📈"}
 ];
 
 // ════════════════════════════════════════════════════════
@@ -876,6 +880,8 @@ function iniciarDash() {
   renderSide();
   renderTabs();
   cargarData();
+  // Registrar el ingreso (alimenta el panel de Actividad del jefe)
+  try{ gasPostReal({accion:'LOG_ACCESO', usuario:SESION.user, rol:SESION.role}); }catch(e){}
 }
 
 function renderTabs() {
@@ -898,14 +904,17 @@ var MODULOS = [
   {id:'stock',        ico:'📦', lbl:'Stock',        tabs:['stock_det','stock_res']},
   {id:'personal',     ico:'👣', lbl:'Personal',     tabs:['mapageneral','marcaciones','statusday','asistencia']},
   {id:'geografia',    ico:'📍', lbl:'Geografía',    tabs:['geo']},
-  {id:'conclusiones', ico:'📝', lbl:'Conclusiones', tabs:['conclusiones']}
+  {id:'conclusiones', ico:'📝', lbl:'Conclusiones', tabs:['conclusiones']},
+  {id:'aprobaciones', ico:'✋', lbl:'Aprobaciones', tabs:['apro_relevos','apro_marcas']},
+  {id:'control',      ico:'🛡️', lbl:'Control',      tabs:['auditoria','actividad'], roles:['jefe']}
 ];
 var MODULO_ACTUAL = 'ventas';
 
 function renderSide(){
   var el = document.getElementById('side'); if(!el) return;
-  var h = '<div class="side-logo"><span class="lg">📊</span><span class="tx">Aspery Dash</span></div>';
+  var h = '<div class="side-logo"><span class="lg">🛡️</span><span class="tx">Seguimiento y Control</span></div>';
   MODULOS.forEach(function(m){
+    if(m.roles && (!SESION || m.roles.indexOf(SESION.role)<0)) return;  // módulos de jefe solo para el jefe
     h += '<div class="side-item'+(m.id===MODULO_ACTUAL?' on':'')+'" onclick="setModulo(\''+m.id+'\')" title="'+m.lbl+'"><span class="ic">'+m.ico+'</span><span class="lb">'+m.lbl+'</span></div>';
   });
   h += '<div class="side-foot"><span class="lb">Desarrollado por SPG</span></div>';
@@ -913,6 +922,7 @@ function renderSide(){
 }
 function setModulo(id){
   var m = MODULOS.filter(function(x){return x.id===id;})[0]; if(!m) return;
+  if(m.roles && (!SESION || m.roles.indexOf(SESION.role)<0)) return;  // bloquea acceso de supervisor a módulos de jefe
   MODULO_ACTUAL = id;
   if(m.tabs.indexOf(TAB_ACTUAL) < 0) TAB_ACTUAL = m.tabs[0];
   renderSide(); renderTabs(); renderContent();
@@ -2542,6 +2552,10 @@ function renderContent() {
   else if (TAB_ACTUAL === 'mapageneral') renderMapaGeneral();
   else if (TAB_ACTUAL === 'statusday') renderStatusDay();
   else if (TAB_ACTUAL === 'conclusiones') renderConclusiones();
+  else if (TAB_ACTUAL === 'apro_relevos') renderAproRelevos();
+  else if (TAB_ACTUAL === 'apro_marcas') renderAproMarcas();
+  else if (TAB_ACTUAL === 'auditoria') renderAuditoria();
+  else if (TAB_ACTUAL === 'actividad') renderActividad();
 }
 
 // ════════════════════════════════════════════════════════
@@ -4162,6 +4176,154 @@ function guardarComentario() {
   var sv = document.getElementById('com-saved');
   sv.style.display = 'block';
   setTimeout(function(){sv.style.display='none';}, 2500);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SEGUIMIENTO Y CONTROL ASPERY — Aprobaciones, Auditoría y Actividad (NUEVO)
+// ═══════════════════════════════════════════════════════════════
+(function(){
+  if(document.getElementById('syc-css')) return;
+  var st=document.createElement('style'); st.id='syc-css';
+  st.textContent =
+    '.panel{background:#fff;border-radius:14px;padding:18px 20px;margin:4px 0 20px}'+
+    '.panel-t{font-size:18px;font-weight:800;color:#051D3A;margin:0 0 4px}'+
+    '.panel-sub{font-size:13px;color:#64748B;margin:0 0 16px;line-height:1.5}'+
+    '.vacio{padding:30px;text-align:center;color:#94A3B8;font-size:14px;background:#F8FAFC;border-radius:10px}'+
+    '.apro-card{border:1px solid #E2E8F0;border-radius:12px;padding:14px;margin-bottom:12px}'+
+    '.apro-h{display:flex;align-items:center;gap:8px;font-size:15px;color:#0F172A;margin-bottom:8px}'+
+    '.apro-b{font-size:13px;color:#475569;line-height:1.6;margin-bottom:12px}'+
+    '.apro-b .sm{font-size:12px;color:#64748B}'+
+    '.apro-btns{display:flex;gap:10px}'+
+    '.apro-btns button{flex:1;padding:11px;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer}'+
+    '.b-no{background:#fff;border:1.5px solid #CBD5E1 !important;color:#475569}'+
+    '.b-si{background:#0EA5F9;color:#fff}'+
+    '.bd{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px}'+
+    '.bd.g{background:#DCFCE7;color:#15803D}.bd.r{background:#FEE2E2;color:#B91C1C}.bd.a{background:#FEF3C7;color:#B45309}.bd.b{background:#DBEAFE;color:#1D4ED8}'+
+    '.tbl-wrap{overflow-x:auto}.tbl{width:100%;border-collapse:collapse;font-size:13px}'+
+    '.tbl th{text-align:left;padding:9px 10px;background:#F1F5F9;color:#475569;font-weight:700;font-size:11.5px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}'+
+    '.tbl td{padding:9px 10px;border-bottom:1px solid #EEF2F6;white-space:nowrap}';
+  document.head.appendChild(st);
+})();
+
+// POST al backend (antes el dashboard solo leía; ahora también aprueba/rebota)
+function gasPostReal(params, cb){
+  var url = getScriptURL(); if(!url){ if(cb)cb(null); return; }
+  params = params || {}; params.tk = "ASP-dcdc1d72bd13356a6f1d0e58eda80435";
+  fetch(url, { method:'POST', body: JSON.stringify(params) })
+    .then(function(r){ return r.json(); })
+    .then(function(d){ if(cb) cb(d); })
+    .catch(function(){ if(cb) cb(null); });
+}
+function _fechaMenos(dias){ var d=new Date(Date.now()-dias*86400000); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+// ── Aprobaciones · Relevos (editar/borrar) ──
+var _APRO_REL = [];
+function renderAproRelevos(){
+  var cont = document.getElementById('content');
+  cont.innerHTML = '<div class="loading"><div class="spinner"></div>Cargando solicitudes…</div>';
+  var p = { accion:'modificaciones' };
+  if(SESION.role==='sup') p.usuario = SESION.user;   // jefe: ve todas
+  gasGetReal(p, function(r){ _APRO_REL = (r && r.status==='ok' && r.mods) ? r.mods : []; pintarAproRelevos(); });
+}
+function pintarAproRelevos(){
+  var cont = document.getElementById('content');
+  var h = '<div class="panel"><h2 class="panel-t">✋ Aprobaciones · Relevos</h2>';
+  h += '<p class="panel-sub">'+_APRO_REL.length+' solicitud(es) pendiente(s) de tu '+(SESION.role==='jefe'?'canal':'equipo')+'.</p>';
+  if(!_APRO_REL.length){ cont.innerHTML = h+'<div class="vacio">No hay solicitudes pendientes. ✓</div></div>'; return; }
+  _APRO_REL.forEach(function(m){
+    var id=m[0], user=m[2], pdv=m[3], fechaRel=m[4], antes=m[5], despues=m[6], tipo=String(m[8]||'EDITAR').toUpperCase();
+    var tag = tipo==='BORRAR' ? '<span class="bd r">🗑 Eliminar</span>' : '<span class="bd b">✏️ Editar</span>';
+    h += '<div class="apro-card"><div class="apro-h"><b>'+user+'</b> '+tag+'</div>';
+    h += '<div class="apro-b"><div>PDV: <b>'+pdv+'</b></div><div class="sm">Relevo: '+fechaRel+'</div>';
+    if(antes) h += '<div class="sm">Antes: '+antes+'</div>';
+    if(despues) h += '<div class="sm">Después: '+despues+'</div>';
+    h += '</div><div class="apro-btns"><button class="b-no" onclick="resolverRelevo(\''+id+'\',\'RECHAZAR\')">✕ Rechazar</button>';
+    h += '<button class="b-si" onclick="resolverRelevo(\''+id+'\',\'APROBAR\')">✓ Aprobar</button></div></div>';
+  });
+  cont.innerHTML = h+'</div>';
+}
+function resolverRelevo(id, dec){
+  if(!confirm('¿'+(dec==='APROBAR'?'Aprobar':'Rechazar')+' esta solicitud?')) return;
+  gasPostReal({accion:'RESOLVER_MOD', id_mod:id, resolucion:dec, resuelto_por:SESION.user, rol:SESION.role}, function(r){
+    if(r && r.status==='ok'){ _gasCache={}; renderAproRelevos(); } else alert('No se pudo procesar. Revisa tu conexión.');
+  });
+}
+
+// ── Aprobaciones · Marcaciones (rebote) ──
+var _APRO_MK = [];
+function renderAproMarcas(){
+  var cont = document.getElementById('content');
+  cont.innerHTML = '<div class="loading"><div class="spinner"></div>Cargando solicitudes…</div>';
+  var p = { accion:'correcciones_marca', estado:'PENDIENTE' };
+  if(SESION.role==='sup') p.usuario = SESION.user;
+  gasGetReal(p, function(r){ _APRO_MK = (r && r.status==='ok' && r.filas) ? r.filas : []; pintarAproMarcas(); });
+}
+function pintarAproMarcas(){
+  var cont = document.getElementById('content');
+  var h = '<div class="panel"><h2 class="panel-t">🔄 Aprobaciones · Marcaciones</h2>';
+  h += '<p class="panel-sub">Al rebotar, se anula la marcación mal puesta y la promotora vuelve a marcar con la foto correcta.</p>';
+  if(!_APRO_MK.length){ cont.innerHTML = h+'<div class="vacio">No hay correcciones pendientes. ✓</div></div>'; return; }
+  _APRO_MK.forEach(function(c){
+    var id=c[0], fecha=c[1], prom=c[2], tipoM=c[5], motivo=c[6];
+    h += '<div class="apro-card"><div class="apro-h"><b>'+prom+'</b> <span class="bd a">'+(tipoM||'MARCA')+'</span></div>';
+    h += '<div class="apro-b"><div class="sm">Solicitado: '+fecha+'</div>';
+    if(motivo) h += '<div class="sm">Motivo: '+motivo+'</div>';
+    h += '</div><div class="apro-btns"><button class="b-no" onclick="resolverMarca(\''+id+'\',\'RECHAZADA\')">✕ Rechazar</button>';
+    h += '<button class="b-si" onclick="resolverMarca(\''+id+'\',\'APROBADA\')">↩ Rebotar (aprobar)</button></div></div>';
+  });
+  cont.innerHTML = h+'</div>';
+}
+function resolverMarca(id, dec){
+  var txt = dec==='APROBADA' ? 'Rebotar esta marcación (la promotora podrá volver a marcar)' : 'Rechazar esta solicitud';
+  if(!confirm('¿'+txt+'?')) return;
+  gasPostReal({accion:'RESOLVER_CORRECCION_MARCA', id:id, resolucion:dec, resuelto_por:SESION.user, rol:SESION.role}, function(r){
+    if(r && r.status==='ok'){ _gasCache={}; renderAproMarcas(); } else alert('No se pudo procesar. Revisa tu conexión.');
+  });
+}
+
+// ── Auditoría (solo jefe): quién aprobó/rebotó qué ──
+function renderAuditoria(){
+  var cont = document.getElementById('content');
+  cont.innerHTML = '<div class="loading"><div class="spinner"></div>Cargando auditoría…</div>';
+  gasGetReal({accion:'listar_auditoria'}, function(r){
+    var filas = (r && r.status==='ok' && r.filas) ? r.filas : [];
+    filas.reverse();
+    var h = '<div class="panel"><h2 class="panel-t">🧾 Auditoría de cambios</h2>';
+    h += '<p class="panel-sub">Cada aprobación, rechazo o rebote — con quién lo hizo y cuándo.</p>';
+    if(!filas.length){ cont.innerHTML = h+'<div class="vacio">Aún no hay movimientos registrados.</div></div>'; return; }
+    h += '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Fecha</th><th>Hora</th><th>Tipo</th><th>Promotora</th><th>Acción</th><th>Quién aprobó</th><th>Rol</th></tr></thead><tbody>';
+    filas.forEach(function(a){
+      var acc=String(a[5]||''); var cls=(acc.indexOf('RECHAZ')>=0)?'r':(acc.indexOf('REBOTE')>=0?'a':'g');
+      h += '<tr><td>'+a[0]+'</td><td>'+a[1]+'</td><td>'+a[2]+'</td><td>'+a[4]+'</td><td><span class="bd '+cls+'">'+acc+'</span></td><td><b>'+a[6]+'</b></td><td>'+a[7]+'</td></tr>';
+    });
+    cont.innerHTML = h+'</tbody></table></div></div>';
+  });
+}
+
+// ── Actividad de supervisores (solo jefe): frecuencia de ingreso ──
+function renderActividad(){
+  var cont = document.getElementById('content');
+  cont.innerHTML = '<div class="loading"><div class="spinner"></div>Cargando actividad…</div>';
+  gasGetReal({accion:'listar_accesos'}, function(r){
+    var filas = (r && r.status==='ok' && r.filas) ? r.filas : [];
+    var hoyS=hoy(), d7=_fechaMenos(7), d30=_fechaMenos(30), agg={};
+    filas.forEach(function(f){
+      var u=String(f[2]||''); if(!u) return;
+      if(!agg[u]) agg[u]={u:u, hoy:0, s7:0, s30:0, ult:''};
+      var fe=String(f[0]||'');
+      if(fe===hoyS) agg[u].hoy++;
+      if(fe>=d7) agg[u].s7++;
+      if(fe>=d30) agg[u].s30++;
+      var marca=fe+' '+String(f[1]||''); if(marca>agg[u].ult) agg[u].ult=marca;
+    });
+    var lista=Object.keys(agg).map(function(k){return agg[k];}).sort(function(a,b){return b.s30-a.s30;});
+    var h='<div class="panel"><h2 class="panel-t">📈 Actividad de supervisores</h2>';
+    h+='<p class="panel-sub">Con qué frecuencia entra cada usuario al centro de control.</p>';
+    if(!lista.length){ cont.innerHTML=h+'<div class="vacio">Aún no hay ingresos registrados.</div></div>'; return; }
+    h+='<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Usuario</th><th>Hoy</th><th>Últ. 7 días</th><th>Últ. 30 días</th><th>Última conexión</th></tr></thead><tbody>';
+    lista.forEach(function(x){ h+='<tr><td><b>'+x.u+'</b></td><td>'+x.hoy+'</td><td>'+x.s7+'</td><td>'+x.s30+'</td><td>'+(x.ult||'—')+'</td></tr>'; });
+    cont.innerHTML=h+'</tbody></table></div></div>';
+  });
 }
 
 </script>
