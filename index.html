@@ -1566,19 +1566,21 @@ function topeDelMes(mes) {
   return mes + '-' + String(last).padStart(2,'0');  // mes pasado → mes completo
 }
 
-// Caché de días con relevo por promotora para el mes del Resumen
-var RELEV_MES = { _mes:'', data:{}, cargando:false };
-function ensureRelevMes(cb){
+// Días con relevo por promotora, calculados de los datos YA cargados (DATA) — sin llamadas extra.
+// Con el rango por defecto (día 1 → hoy), DATA ya contiene todo el mes.
+var RELEV_MES = { _mes:'', data:{} };
+function buildRelevFromData(){
   var mes = (FECHA_HASTA || hoy()).slice(0,7);
-  if (RELEV_MES._mes === mes && !RELEV_MES.cargando) { cb(false); return; }
-  if (RELEV_MES.cargando) { cb(false); return; }
-  var proms = SESION.role === 'jefe' ? TODOS_PROMS.slice() : (SUP_MAP[SESION.user] || []);
-  if (!proms.length) { RELEV_MES={_mes:mes,data:{},cargando:false}; cb(false); return; }
-  RELEV_MES.cargando = true;
-  gasGetReal({accion:'dias_relevados', promotoras:proms.join(','), mes:mes}, function(resp){
-    RELEV_MES = { _mes:mes, data:(resp && resp.status==='ok' && resp.dias) ? resp.dias : {}, cargando:false };
-    cb(true);  // true = recién cargado → conviene re-render
+  var map = {};
+  (DATA || []).forEach(function(r){
+    if (!r.fecha || r.fecha.indexOf(mes) !== 0) return;
+    var u = r.usuario; if (!u) return;
+    if (!map[u]) map[u] = {};
+    map[u][r.fecha] = true;
   });
+  var out = {};
+  Object.keys(map).forEach(function(u){ out[u] = Object.keys(map[u]); });
+  RELEV_MES = { _mes:mes, data:out };
 }
 // Celda "días relevados" para una promotora
 function _relHabProm(prom){
@@ -2666,8 +2668,8 @@ function renderContent() {
 // TAB: RESUMEN
 // ════════════════════════════════════════════════════════
 function renderResumen() {
-  // Asegura los días relevados del mes; si recién se cargaron, re-renderiza
-  ensureRelevMes(function(recienCargado){ if(recienCargado && TAB_ACTUAL==='resumen') renderResumen(); });
+  // "Días mes" se calcula de los datos YA cargados (sin llamadas extra al servidor)
+  buildRelevFromData();
 
   var data = dataFiltrada();
   var m = calcMetricas(data);
