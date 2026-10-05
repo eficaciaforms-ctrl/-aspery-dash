@@ -87,6 +87,10 @@ button{font-family:inherit;}
 .side:hover{width:240px}
 .side.open{width:240px}
 .side.open .side-logo .tx,.side.open .side-item .lb,.side.open .side-foot .lb{opacity:1}
+.btn-cargar{padding:9px 16px;background:#051D3A;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.btn-cargar:hover{background:#0A2A4E}
+.btn-cargar.pend{background:#0EA5F9;box-shadow:0 0 0 3px rgba(14,165,249,.25);animation:cargaPulse 1.3s ease-in-out infinite}
+@keyframes cargaPulse{0%,100%{box-shadow:0 0 0 3px rgba(14,165,249,.25)}50%{box-shadow:0 0 0 6px rgba(14,165,249,.1)}}
 .side-burger{color:#fff;font-size:20px;padding:6px 21px 10px;cursor:pointer;opacity:.9;flex-shrink:0}
 .side-burger:hover{opacity:1}
 .side-logo{display:flex;align-items:center;gap:12px;padding:12px 19px 18px;color:#fff;white-space:nowrap}
@@ -798,6 +802,7 @@ var TABS_CONFIG = [
 function fmt(n){return Number(n||0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function fmtN(n){return Number(n||0).toLocaleString('es-PE');}
 function hoy(){var h=new Date();return h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0')+'-'+String(h.getDate()).padStart(2,'0');}
+function primerDiaMes(){var h=new Date();return h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0')+'-01';}
 
 // Offset entre la hora del servidor (Lima) y el reloj de este PC, para calcular tiempos exactos
 var SRV_OFFSET_MS = 0;
@@ -836,7 +841,7 @@ window.addEventListener('load', function(){
   if (saved) {
     try {
       SESION = JSON.parse(saved);
-      FECHA_DESDE = sessionStorage.getItem('dash_fecha_desde') || hoy();
+      FECHA_DESDE = sessionStorage.getItem('dash_fecha_desde') || primerDiaMes();
       FECHA_HASTA = sessionStorage.getItem('dash_fecha_hasta') || hoy();
       iniciarDash();
     } catch(e){}
@@ -850,8 +855,8 @@ function doLogin() {
   if (!USERS[u]) { showErr('Usuario "'+u+'" no encontrado'); return; }
   if (USERS[u].pass !== p) { showErr('Contraseña incorrecta'); return; }
   SESION = { user:u, role:USERS[u].role, nombre:USERS[u].nombre, zona:USERS[u].zona };
-  // Rango por defecto: hoy → hoy. El usuario podrá ajustarlo dentro del dashboard.
-  FECHA_DESDE = hoy();
+  // Rango por defecto: acumulado del mes (día 1 → hoy). Ajustable con el botón "Cargar".
+  FECHA_DESDE = primerDiaMes();
   FECHA_HASTA = hoy();
   sessionStorage.setItem('dash_sesion', JSON.stringify(SESION));
   sessionStorage.setItem('dash_fecha_desde', FECHA_DESDE);
@@ -957,10 +962,9 @@ function onChangeDesde(nueva) {
   }
   FECHA_DESDE = nueva;
   // Si desde > hasta, ajustar hasta al mismo día
-  if (FECHA_DESDE > FECHA_HASTA) FECHA_HASTA = FECHA_DESDE;
-  sessionStorage.setItem('dash_fecha_desde', FECHA_DESDE);
-  sessionStorage.setItem('dash_fecha_hasta', FECHA_HASTA);
-  cargarData();
+  if (FECHA_DESDE > FECHA_HASTA) { FECHA_HASTA = FECHA_DESDE; var h=document.getElementById('filt-hasta-input'); if(h) h.value=FECHA_HASTA; }
+  // NO recarga aquí: los cambios se aplican con el botón "Cargar"
+  marcarRangoPendiente();
 }
 function onChangeHasta(nueva) {
   if (!nueva || !/^\d{4}-\d{2}-\d{2}$/.test(nueva)) return;
@@ -972,9 +976,23 @@ function onChangeHasta(nueva) {
   }
   FECHA_HASTA = nueva;
   // Si hasta < desde, ajustar desde al mismo día
-  if (FECHA_HASTA < FECHA_DESDE) FECHA_DESDE = FECHA_HASTA;
+  if (FECHA_HASTA < FECHA_DESDE) { FECHA_DESDE = FECHA_HASTA; var d=document.getElementById('filt-desde-input'); if(d) d.value=FECHA_DESDE; }
+  // NO recarga aquí: los cambios se aplican con el botón "Cargar"
+  marcarRangoPendiente();
+}
+
+// Resalta el botón Cargar cuando hay un rango elegido sin aplicar
+function marcarRangoPendiente(){
+  var b=document.getElementById('btn-cargar-rango');
+  if(b){ b.classList.add('pend'); b.textContent='⟳ Cargar fechas'; }
+}
+// Aplica el rango elegido y recarga (una sola vez)
+function aplicarRango(){
+  if(FECHA_HASTA < FECHA_DESDE){ var t=FECHA_DESDE; FECHA_DESDE=FECHA_HASTA; FECHA_HASTA=t; }
   sessionStorage.setItem('dash_fecha_desde', FECHA_DESDE);
   sessionStorage.setItem('dash_fecha_hasta', FECHA_HASTA);
+  RELEV_MES = { _mes:'', data:{}, cargando:false };  // recalcular "Días mes" si cambió el mes
+  var b=document.getElementById('btn-cargar-rango'); if(b){ b.classList.remove('pend'); b.textContent='⟳ Cargar'; }
   cargarData();
 }
 function aplicarPreset(preset) {
@@ -1066,7 +1084,9 @@ function autoRefrescar(){
   cargarData();
   marcarActualizado();
 }
-setInterval(autoRefrescar, 30000);      // cada 30 segundos
+// Auto-refresco cada 30s DESACTIVADO: la vista en tiempo real vive en la página aparte.
+// Para actualizar, usa el botón ↻ (recargar) del dashboard.
+// setInterval(autoRefrescar, 30000);
 setInterval(actualizarChipHora, 1000);  // actualizar el texto "hace X" cada segundo
 
 // ════════════════════════════════════════════════════════
@@ -2454,6 +2474,9 @@ function renderFiltros() {
   html += '<div class="filt-lbl">Hasta</div>';
   html += '<input type="date" class="filt-date'+(pAct?'':' active')+'" id="filt-hasta-input" value="'+FECHA_HASTA+'" min="'+FECHA_DESDE+'" max="'+hoy()+'" onchange="onChangeHasta(this.value)" />';
   html += '</div>';
+
+  // Botón CARGAR (aplica el rango de fechas elegido)
+  html += '<div class="filt-grp"><div class="filt-lbl">&nbsp;</div><button id="btn-cargar-rango" class="btn-cargar" onclick="aplicarRango()">⟳ Cargar</button></div>';
 
   // Supervisor (solo si es jefe)
   if (SESION.role === 'jefe') {
