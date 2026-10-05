@@ -1512,6 +1512,77 @@ var FERIADOS_PE = [
 ];
 function esFeriado(f) { return FERIADOS_PE.indexOf(f) >= 0; }
 
+// ── FERIADOS REGIONALES (NUEVO) ──────────────────────────────
+// Feriados que aplican SOLO a ciertas plazas. Formato:
+//   'YYYY-MM-DD': ['PROMPIU','PROMTRUX', ...]   // promotoras a las que aplica
+// Ejemplo (reemplaza por las fechas reales cuando las tengas):
+//   '2026-09-XX': ['PROMPIU'],   // feriado regional de Piura de septiembre
+var FERIADOS_REGIONALES = {
+  // '2026-10-01': ['PROMPIU'],   // ← ejemplo: feriado regional Piura (edítalo)
+};
+function esFeriadoRegional(f, prom) {
+  var lista = FERIADOS_REGIONALES[f];
+  return !!(lista && lista.indexOf(prom) >= 0);
+}
+
+// Días hábiles del mes para una promotora, hasta 'tope' (sábados SÍ cuentan;
+// se excluyen domingos + feriados nacionales + feriados regionales de su plaza)
+function diasHabilesMes(mes, prom, tope) {
+  var dd = diasDelMes(mes);
+  var n = 0;
+  for (var i = 0; i < dd.length; i++) {
+    var d = dd[i];
+    if (d.sun || d.fer) continue;
+    if (esFeriadoRegional(d.fecha, prom)) continue;
+    if (tope && d.fecha > tope) continue;
+    n++;
+  }
+  return n;
+}
+function topeDelMes(mes) {
+  var hoyS = hoy();
+  if (mes === hoyS.slice(0,7)) return hoyS;         // mes actual → hasta hoy
+  var p = mes.split('-'); var last = new Date(parseInt(p[0]), parseInt(p[1]), 0).getDate();
+  return mes + '-' + String(last).padStart(2,'0');  // mes pasado → mes completo
+}
+
+// Caché de días con relevo por promotora para el mes del Resumen
+var RELEV_MES = { _mes:'', data:{}, cargando:false };
+function ensureRelevMes(cb){
+  var mes = (FECHA_HASTA || hoy()).slice(0,7);
+  if (RELEV_MES._mes === mes && !RELEV_MES.cargando) { cb(false); return; }
+  if (RELEV_MES.cargando) { cb(false); return; }
+  var proms = SESION.role === 'jefe' ? TODOS_PROMS.slice() : (SUP_MAP[SESION.user] || []);
+  if (!proms.length) { RELEV_MES={_mes:mes,data:{},cargando:false}; cb(false); return; }
+  RELEV_MES.cargando = true;
+  gasGetReal({accion:'dias_relevados', promotoras:proms.join(','), mes:mes}, function(resp){
+    RELEV_MES = { _mes:mes, data:(resp && resp.status==='ok' && resp.dias) ? resp.dias : {}, cargando:false };
+    cb(true);  // true = recién cargado → conviene re-render
+  });
+}
+// Celda "días relevados" para una promotora
+function _relHabProm(prom){
+  var mes = (FECHA_HASTA || hoy()).slice(0,7);
+  var set = {}; (RELEV_MES.data[prom]||[]).forEach(function(f){ set[f]=true; });
+  var hab = diasHabilesMes(mes, prom, topeDelMes(mes));
+  var rel = 0; Object.keys(set).forEach(function(f){ if(f.indexOf(mes)===0) rel++; });
+  if (rel > hab) rel = hab;
+  return {rel:rel, hab:hab};
+}
+function _celdaRH(rel, hab){
+  var pct = hab>0 ? Math.round(rel/hab*100) : 0;
+  var col = pct>=90?'var(--green)':(pct>=70?'var(--amber)':'var(--red)');
+  return '<td class="r num" style="color:'+col+'"><strong>'+rel+'</strong>/'+hab+'</td>';
+}
+function celdaDiasRelev(prom){ var x=_relHabProm(prom); return _celdaRH(x.rel, x.hab); }
+// Agregado por supervisor: suma de su equipo
+function celdaDiasRelevSup(sup){
+  var proms = SUP_MAP[sup] || [];
+  var rel=0, hab=0;
+  proms.forEach(function(p){ var x=_relHabProm(p); rel+=x.rel; hab+=x.hab; });
+  return _celdaRH(rel, hab);
+}
+
 function nombreMes(m) {
   var p = m.split('-');
   var M = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Setiembre','Octubre','Noviembre','Diciembre'];
@@ -2572,6 +2643,9 @@ function renderContent() {
 // TAB: RESUMEN
 // ════════════════════════════════════════════════════════
 function renderResumen() {
+  // Asegura los días relevados del mes; si recién se cargaron, re-renderiza
+  ensureRelevMes(function(recienCargado){ if(recienCargado && TAB_ACTUAL==='resumen') renderResumen(); });
+
   var data = dataFiltrada();
   var m = calcMetricas(data);
 
@@ -2701,7 +2775,7 @@ function kpiCard(lbl, val, color) {
 // ── TABLA SUPERVISORES EXPANDIBLE (vista jefe) ─────────
 function renderTablaSupervisoresExpandible(data) {
   var html = '<table class="tbl"><thead><tr>';
-  html += '<th style="min-width:200px">Supervisor</th><th>Zona</th><th class="r">Proms</th><th class="r">Visitas</th><th class="r">C/Venta</th><th class="r">Efect.</th><th class="r">Total S/</th>';
+  html += '<th style="min-width:200px">Supervisor</th><th>Zona</th><th class="r">Proms</th><th class="r">Visitas</th><th class="r">C/Venta</th><th class="r">Efect.</th><th class="r" title="Días relevados / días hábiles del mes (sin domingos ni feriados)">Días mes</th><th class="r">Total S/</th>';
   html += '</tr></thead><tbody>';
 
   var sups = Object.keys(SUP_MAP);
@@ -2721,6 +2795,7 @@ function renderTablaSupervisoresExpandible(data) {
     html += '<td class="r num">'+m.vis+'</td>';
     html += '<td class="r num" style="color:var(--green)">'+m.cv+'</td>';
     html += '<td class="r num" style="color:'+efCol+'"><strong>'+m.ef+'%</strong></td>';
+    html += celdaDiasRelevSup(sup);
     html += '<td class="r num"><strong>S/ '+fmt(m.tot)+'</strong></td>';
     html += '</tr>';
 
@@ -2738,11 +2813,12 @@ function renderTablaSupervisoresExpandible(data) {
         html += '<td class="r num">'+pm.vis+'</td>';
         html += '<td class="r num" style="color:var(--green)">'+pm.cv+'</td>';
         html += '<td class="r num" style="color:'+pEfCol+'">'+(pm.vis>0?pm.ef+'%':'—')+'</td>';
+        html += celdaDiasRelev(pm.nombre);
         html += '<td class="r num">S/ '+fmt(pm.tot)+'</td>';
         html += '</tr>';
 
         if (pExp && pm.visitas.length > 0) {
-          html += '<tr class="row-detail"><td colspan="7">';
+          html += '<tr class="row-detail"><td colspan="8">';
           html += renderDetalleVisitas(pm.visitas, pm.nombre);
           html += '</td></tr>';
         }
@@ -2763,7 +2839,7 @@ function renderTablaPromotorasExpandible(data) {
   else proms = SUP_MAP[SESION.user] || [];
 
   var html = '<table class="tbl"><thead><tr>';
-  html += '<th>Promotora</th><th>Distribuidora</th><th class="r">Estado</th><th class="r">Visitas</th><th class="r">C/Venta</th><th class="r">Efect.</th><th class="r">Total S/</th>';
+  html += '<th>Promotora</th><th>Distribuidora</th><th class="r">Estado</th><th class="r">Visitas</th><th class="r">C/Venta</th><th class="r">Efect.</th><th class="r" title="Días relevados / días hábiles del mes (sin domingos ni feriados)">Días mes</th><th class="r">Total S/</th>';
   html += '</tr></thead><tbody>';
 
   var pData = proms.map(function(p){return {nombre:p, m:metricasPromotora(data, p)};});
@@ -2784,11 +2860,12 @@ function renderTablaPromotorasExpandible(data) {
     html += '<td class="r num">'+pm.vis+'</td>';
     html += '<td class="r num" style="color:var(--green)">'+pm.cv+'</td>';
     html += '<td class="r num" style="color:'+efCol+'"><strong>'+(pm.vis>0?pm.ef+'%':'—')+'</strong></td>';
+    html += celdaDiasRelev(prom);
     html += '<td class="r num"><strong>S/ '+fmt(pm.tot)+'</strong></td>';
     html += '</tr>';
 
     if (expanded && pm.visitas.length > 0) {
-      html += '<tr class="row-detail"><td colspan="7">';
+      html += '<tr class="row-detail"><td colspan="8">';
       html += renderDetalleVisitas(pm.visitas, prom);
       html += '</td></tr>';
     }
