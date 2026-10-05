@@ -272,7 +272,9 @@ function procesar(marcas, ubics){
     if(ord>=d._um){
       d._um=ord;
       var tipo=String(m.tipo||'').toUpperCase();
-      d.estado=(tipo==='FIN')?'fin':(tipo==='CONVEND'?'conv':'sola');
+      var vendN=String(m.vendedor||'').trim();
+      var tieneVend=vendN && !/esperando|por confirmar/i.test(vendN) && vendN.toUpperCase()!=='SOLA';
+      d.estado=(tipo==='FIN')?'fin':((tipo==='CONVEND'||(tipo==='INICIO'&&tieneVend))?'conv':'sola');
       d.dist=m.dist||'';
       var la=parseFloat(m.lat), ln=parseFloat(m.lng);
       if(!isNaN(la)&&!isNaN(ln)&&enPeru(la,ln)){ d.ultLat=la; d.ultLng=ln; d.ultHora=m.hora||''; d.ubicTxt=m.ubic||''; }
@@ -287,8 +289,19 @@ function procesar(marcas, ubics){
   });
   Object.keys(DATOS).forEach(function(u){
     var d=DATOS[u];
+    d.trail = filtrarGPS(d.trail);
     if(d.trail.length){ var last=d.trail[d.trail.length-1]; d.ultLat=last[0]; d.ultLng=last[1]; if(last[2]) d.ultHora=last[2]; }
   });
+}
+// Descarta lecturas de GPS erróneas por densidad (elimina lecturas aisladas en otra ciudad)
+function filtrarGPS(trail){
+  if(trail.length < 5) return trail;
+  var minVecinos = Math.max(3, Math.round(trail.length * 0.2));
+  var limpio = trail.filter(function(p){
+    var n=0; for(var i=0;i<trail.length;i++){ if(Math.abs(trail[i][0]-p[0])<0.8 && Math.abs(trail[i][1]-p[1])<0.8) n++; }
+    return n >= minVecinos;
+  });
+  return limpio.length ? limpio : trail;
 }
 
 function badge(est){
@@ -339,11 +352,16 @@ function pintarMapa(){
     mk.on('click',function(){ seleccionar(u); });
     pts.push([d.ultLat,d.ultLng]);
   });
-  if(SELECCION && DATOS[SELECCION] && DATOS[SELECCION].trail.length>1){
-    var tr=DATOS[SELECCION].trail.map(function(p){return [p[0],p[1]];});
-    L.polyline(tr,{color:'#0EA5F9',weight:3,opacity:.8}).addTo(CAPA);
-    tr.forEach(function(p,i){ L.circleMarker(p,{radius:4,color:'#0369A1',fillColor:'#0EA5F9',fillOpacity:1,weight:1}).addTo(CAPA).bindTooltip(String(i+1)); });
-    MAPA.fitBounds(L.latLngBounds(tr).pad(0.2));
+  if(SELECCION && DATOS[SELECCION] && DATOS[SELECCION].trail.length>0){
+    var trail=DATOS[SELECCION].trail;
+    var tr=trail.map(function(p){return [p[0],p[1]];});
+    if(tr.length>1) L.polyline(tr,{color:'#0EA5F9',weight:2,opacity:.35}).addTo(CAPA);
+    trail.forEach(function(p,i){
+      var esUltimo=(i===trail.length-1);
+      L.circleMarker([p[0],p[1]],{radius:esUltimo?7:4.5,color:'#fff',weight:esUltimo?3:1.5,fillColor:esUltimo?'#16A34A':'#0EA5F9',fillOpacity:1}).addTo(CAPA)
+        .bindTooltip((p[2]?('Señal '+(i+1)+' · '+String(p[2]).slice(11,16)):('Señal '+(i+1))),{direction:'top'});
+    });
+    MAPA.fitBounds(L.latLngBounds(tr).pad(0.25));
   } else if(pts.length){ MAPA.fitBounds(L.latLngBounds(pts).pad(0.3)); }
 }
 function seleccionar(u){ SELECCION=(SELECCION===u)?null:u; render(); }
