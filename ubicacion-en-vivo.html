@@ -394,29 +394,47 @@ function pintarMapa(){
   SESION.equipo.forEach(function(u){
     var d=DATOS[u];
     if(d.ultLat==null) return;
-    var mk = L.marker([d.ultLat,d.ultLng],{icon:iconPin(colorEst(d.estado))}).addTo(CAPA);
-    mk.bindPopup('<strong>'+nom(u)+'</strong><br>'+badge(d.estado).replace(/<[^>]+>/g,function(m){return m.indexOf('bdg')>=0?'':m})+
+    // Si hay una promotora seleccionada, su pin se dibuja aparte (resaltado) más abajo
+    if(SELECCION && u===SELECCION) { pts.push([d.ultLat,d.ultLng]); return; }
+    var atenua = SELECCION ? 0.35 : 1;   // atenúa a las demás cuando hay una seleccionada
+    var mk = L.marker([d.ultLat,d.ultLng],{icon:iconPin(colorEst(d.estado)), opacity:atenua}).addTo(CAPA);
+    mk.bindPopup('<strong>'+nom(u)+'</strong><br>'+
                  (d.ultHora?('Última señal: '+d.ultHora+'<br>'):'')+
                  (d.ubicTxt?('📍 '+d.ubicTxt):''));
     mk.on('click',function(){ seleccionar(u); });
     pts.push([d.ultLat,d.ultLng]);
   });
-  // recorrido de la promotora seleccionada: PUNTITOS tipo Google Maps
-  if(SELECCION && DATOS[SELECCION] && DATOS[SELECCION].trail.length>0){
-    var trail = DATOS[SELECCION].trail;
+
+  // ── Promotora seleccionada: recorrido (puntitos tipo Google Maps) o, si no hay
+  //    señales GPS todavía, al menos su última posición marcada ──
+  if(SELECCION && DATOS[SELECCION]){
+    var dSel = DATOS[SELECCION];
+    var trail = dSel.trail || [];
     var tr = trail.map(function(p){return [p[0],p[1]];});
-    // línea tenue que une los puntos (el "hilo" del recorrido)
-    if(tr.length>1) L.polyline(tr,{color:'#0EA5F9',weight:2,opacity:.35}).addTo(CAPA);
-    // un puntito por cada señal de GPS
-    trail.forEach(function(p,i){
-      var esUltimo = (i===trail.length-1);
-      L.circleMarker([p[0],p[1]],{
-        radius: esUltimo?7:4.5,
-        color:'#fff', weight: esUltimo?3:1.5,
-        fillColor: esUltimo?'#16A34A':'#0EA5F9', fillOpacity:1
-      }).addTo(CAPA).bindTooltip((p[2]?('Señal '+(i+1)+' · '+p[2].slice(11,16)):('Señal '+(i+1))),{direction:'top'});
-    });
-    MAPA.fitBounds(L.latLngBounds(tr).pad(0.25));
+
+    if(tr.length>0){
+      // línea tenue que une los puntos (el "hilo" del recorrido)
+      if(tr.length>1) L.polyline(tr,{color:'#0EA5F9',weight:2,opacity:.45}).addTo(CAPA);
+      // un puntito por cada señal de GPS
+      trail.forEach(function(p,i){
+        var esUltimo = (i===trail.length-1);
+        L.circleMarker([p[0],p[1]],{
+          radius: esUltimo?7:4.5,
+          color:'#fff', weight: esUltimo?3:1.5,
+          fillColor: esUltimo?'#16A34A':'#0EA5F9', fillOpacity:1
+        }).addTo(CAPA).bindTooltip((p[2]?('Señal '+(i+1)+' · '+p[2].slice(11,16)):('Señal '+(i+1))),{direction:'top'});
+      });
+      MAPA.fitBounds(L.latLngBounds(tr).pad(0.25), {maxZoom:16});
+    } else if(dSel.ultLat!=null){
+      // sin recorrido aún: pin resaltado y acercamos a su posición
+      L.circleMarker([dSel.ultLat,dSel.ultLng],{
+        radius:8, color:'#fff', weight:3, fillColor:colorEst(dSel.estado), fillOpacity:1
+      }).addTo(CAPA).bindTooltip(nom(SELECCION)+(dSel.ultHora?(' · '+dSel.ultHora):''),{direction:'top'});
+      MAPA.setView([dSel.ultLat,dSel.ultLng], 15, {animate:true});
+    } else if(pts.length){
+      // la promotora seleccionada no tiene ninguna posición → mostramos el equipo
+      MAPA.fitBounds(L.latLngBounds(pts).pad(0.3));
+    }
   } else if(pts.length){
     MAPA.fitBounds(L.latLngBounds(pts).pad(0.3));
   }
