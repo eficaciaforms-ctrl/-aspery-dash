@@ -19,7 +19,8 @@
   --bg:#F1F5F9; --card:#FFFFFF; --line:#E2E8F0; --t1:#0F172A; --t2:#475569; --t3:#94A3B8;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t1);-webkit-font-smoothing:antialiased}
+html,body{height:100%}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t1);-webkit-font-smoothing:antialiased;overflow:hidden}
 button{font-family:inherit;cursor:pointer;border:none}
 input{font-family:inherit}
 
@@ -37,7 +38,7 @@ input{font-family:inherit}
 #login .err{font-size:12.5px;color:var(--red);min-height:16px;margin-bottom:8px;font-weight:600}
 
 /* ── APP ── */
-#app{display:none;min-height:100vh;flex-direction:column}
+#app{display:none;height:100vh;height:100dvh;flex-direction:column;overflow:hidden}
 header{background:var(--navy);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:500}
 header .brand{font-size:18px;font-weight:800;white-space:nowrap}
 header .brand b{color:var(--blue)}
@@ -49,6 +50,7 @@ header .dot.off{background:var(--gray);animation:none}
 header input[type=date]{background:#0A2A4E;border:1px solid #1E3A5F;color:#fff;border-radius:8px;padding:7px 10px;font-size:13px}
 header .who{font-size:12px;color:#CBD5E1}
 header .out{background:#1E3A5F;color:#fff;padding:7px 11px;border-radius:8px;font-size:12px;font-weight:600}
+header .ping-info{display:inline-flex;align-items:center;gap:5px;background:#0A2A4E;border:1px solid #1E3A5F;color:#BAE6FD;border-radius:999px;padding:5px 11px;font-size:11.5px;font-weight:700;white-space:nowrap}
 
 .stats{display:flex;gap:10px;padding:12px 16px;flex-wrap:wrap;background:var(--card);border-bottom:1px solid var(--line)}
 .stat{flex:1;min-width:90px;background:var(--bg);border-radius:12px;padding:10px 12px;border-left:4px solid var(--gray)}
@@ -59,7 +61,7 @@ header .out{background:#1E3A5F;color:#fff;padding:7px 11px;border-radius:8px;fon
 .stat.b{border-color:var(--blue)} .stat.b .n{color:var(--blue-d)}
 .stat.x{border-color:var(--gray)} .stat.x .n{color:var(--gray)}
 
-.main{flex:1;display:flex;gap:0;min-height:0}
+.main{flex:1;display:flex;gap:0;min-height:0;position:relative;overflow:hidden}
 .list{width:340px;max-width:40%;overflow-y:auto;background:var(--card);border-right:1px solid var(--line)}
 .list .ltitle{font-size:12px;font-weight:700;color:var(--t2);padding:12px 16px 6px;text-transform:uppercase;letter-spacing:.04em}
 .row{padding:12px 16px;border-bottom:1px solid var(--line);cursor:pointer;transition:background .12s;border-left:4px solid transparent}
@@ -72,18 +74,37 @@ header .out{background:#1E3A5F;color:#fff;padding:7px 11px;border-radius:8px;fon
 .bdg.gray{background:#E2E8F0;color:#475569} .bdg.dark{background:#334155;color:#fff}
 .row .meta{font-size:12px;color:var(--t2);margin-top:5px;line-height:1.5}
 .row .meta b{color:var(--t1);font-weight:600}
-#map{flex:1;min-height:300px}
+#map{flex:1;min-height:0;height:100%}
 .empty{padding:40px 20px;text-align:center;color:var(--t3);font-size:13px}
 
 .foot{font-size:11px;color:var(--t3);text-align:center;padding:9px}
 .pin{background:var(--blue);width:16px;height:16px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.pin-lg{width:22px;height:22px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center}
+.pin-lg span{transform:rotate(45deg);font-size:11px;font-weight:800;color:#fff;line-height:1}
 .leaflet-popup-content{font-family:'Inter',sans-serif;font-size:12.5px}
 .leaflet-popup-content strong{color:var(--navy)}
+/* etiquetas permanentes de los hitos */
+.hito-lbl{background:#fff;border:1.5px solid var(--line);border-radius:7px;padding:3px 7px;font-size:11px;font-weight:700;color:var(--navy);box-shadow:0 1px 4px rgba(0,0,0,.18);white-space:nowrap}
+.hito-lbl.conv{border-color:#16A34A;color:#15803D}
+.hito-lbl.sola{border-color:#F59E0B;color:#B45309}
+.hito-lbl.fin{border-color:#64748B;color:#334155}
+.hito-lbl.act{border-color:#16A34A;background:#16A34A;color:#fff}
+/* marcador de venta */
+.sale-badge{background:#16A34A;color:#fff;border:2px solid #fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+.sale-badge.novta{background:#94A3B8}
+.vta-pop strong{color:var(--navy)}
+.vta-pop .tot{color:#15803D;font-weight:800}
+/* leyenda del mapa */
+.legend{position:absolute;bottom:14px;left:14px;z-index:600;background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:10px;padding:8px 11px;font-size:11px;line-height:1.7;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.legend b{display:block;font-size:10.5px;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.ventas-tag{font-size:11.5px;color:#15803D;font-weight:700}
+.ventas-tag.cero{color:var(--t3);font-weight:600}
 
 @media(max-width:720px){
   .main{flex-direction:column}
-  .list{width:100%;max-width:100%;max-height:42vh;border-right:none;border-bottom:1px solid var(--line)}
-  #map{min-height:46vh}
+  .list{width:100%;max-width:100%;flex:0 0 auto;max-height:38vh;overflow-y:auto;border-right:none;border-bottom:1px solid var(--line)}
+  #map{flex:1;min-height:0;height:auto}
   header .brand{font-size:16px}
 }
 </style>
@@ -111,6 +132,7 @@ header .out{background:#1E3A5F;color:#fff;padding:7px 11px;border-radius:8px;fon
     <div class="brand">Asper<b>y</b> · En Vivo</div>
     <input type="date" id="fecha" onchange="cambiarFecha()"/>
     <div class="live"><span class="dot" id="live-dot"></span><span id="live-txt">en vivo</span></div>
+    <span class="ping-info" id="ping-info">📍 Ubicación cada 1 min</span>
     <div class="spacer"></div>
     <div class="who" id="who"></div>
     <button class="out" onclick="salir()">Salir</button>
@@ -129,6 +151,14 @@ header .out{background:#1E3A5F;color:#fff;padding:7px 11px;border-radius:8px;fon
       <div id="list-body"></div>
     </div>
     <div id="map"></div>
+    <div class="legend" id="legend" style="display:none">
+      <b>Al seleccionar una promotora</b>
+      <div><i style="background:#F59E0B"></i>Inició sola</div>
+      <div><i style="background:#16A34A"></i>Inició / pasó con vendedor</div>
+      <div><i style="background:#16A34A;box-shadow:0 0 0 3px rgba(22,163,74,.3)"></i>Dónde está ahora</div>
+      <div><i style="background:#64748B"></i>Cerró ruta</div>
+      <div><span style="display:inline-block;width:12px;height:12px;background:#16A34A;border-radius:50%;color:#fff;font-size:8px;text-align:center;line-height:12px;margin-right:4px">$</span>Venta registrada (clic para ver)</div>
+    </div>
   </div>
 
   <div class="foot">Aspery · Desarrollado por SPG · <span id="foot-upd"></span></div>
@@ -140,7 +170,7 @@ header .out{background:#1E3A5F;color:#fff;padding:7px 11px;border-radius:8px;fon
    ═══════════════════════════════════════════════════════════════════════ */
 var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzC_ANIW871GP6G3uUWowoaSHo-4cIAhObFL7xp8m_ZJjdqs2P9KWYxZIcGAX9oy8cl/exec';
 var APP_TOKEN  = 'ASP-dcdc1d72bd13356a6f1d0e58eda80435';
-var REFRESH_MS = 60000;   // auto-refresco solo cuando ves el día de HOY (60s)
+var REFRESH_MS = 25000;   // auto-refresco solo cuando ves el día de HOY (25s)
 
 // Quién inicia sesión y a quién ve (igual que el dashboard)
 var LOGIN = {
@@ -184,16 +214,20 @@ function gasGet(params, cb){
   })();
 }
 
-// Trae marcaciones + ubicaciones del día, solo para el equipo en alcance
+// Trae marcaciones + ubicaciones + ventas del día, solo para el equipo en alcance
 function cargarDatos(fecha, promotorasCSV, cb){
-  var resultado = { marcas:null, ubics:null };
-  function listo(){ if(resultado.marcas!==null && resultado.ubics!==null) cb(resultado) }
+  var resultado = { marcas:null, ubics:null, ventas:null };
+  function listo(){ if(resultado.marcas!==null && resultado.ubics!==null && resultado.ventas!==null) cb(resultado) }
   gasGet({accion:'listar_marcaciones', promotoras:promotorasCSV, fecha:fecha}, function(r){
     resultado.marcas = (r && r.status==='ok' && r.filas) ? r.filas : [];
     listo();
   });
   gasGet({accion:'listar_ubicaciones', promotoras:promotorasCSV, fecha:fecha}, function(r){
     resultado.ubics = (r && r.status==='ok' && r.filas) ? r.filas : [];
+    listo();
+  });
+  gasGet({accion:'listar_equipo', promotoras:promotorasCSV, fecha:fecha}, function(r){
+    resultado.ventas = (r && r.status==='ok' && r.filas) ? r.filas : [];
     listo();
   });
 }
@@ -204,6 +238,8 @@ function cargarDatos(fecha, promotorasCSV, cb){
 // Índices de columnas (así los entrega el backend)
 var M = {fecha:1, hora:2, usuario:6, tipo:7, dist:8, vend:9, lat:10, lng:11, ubic:12, bat:13}; // Marcaciones
 var U = {fecha:1, hora:2, usuario:3, lat:4, lng:5, prec:6, bat:7};                               // Ubicaciones
+// Registros/Ventas (acción listar_equipo): ID,Accion,Fecha,Hora,Usuario,Dist,Mesa,Vendedor,PDV,...,Realizo Pedido(16),EAN(17),Producto(18),Marca(19),Cantidad(20),...,Total(24),Causal(25),DetCausal(26)
+var V = {fecha:2, hora:3, usuario:4, dist:5, vend:7, pdv:8, pedido:16, ean:17, prod:18, marca:19, cant:20, total:24, causal:25, caudet:26};
 
 var SESION = null;     // {user, nombre, equipo:[...]}
 var MAPA = null, CAPA = null;   // Leaflet
@@ -271,34 +307,46 @@ function cargar(){
   var csv = SESION.equipo.join(',');
   document.getElementById('list-title').textContent = 'Cargando…';
   cargarDatos(fecha, csv, function(res){
-    procesar(res.marcas, res.ubics);
+    procesar(res.marcas, res.ubics, res.ventas);
     render();
     ultActualiza = Date.now();
     document.getElementById('foot-upd').textContent = 'actualizado '+new Date().toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'});
   });
 }
 
-function procesar(marcas, ubics){
+function procesar(marcas, ubics, ventas){
   DATOS = {};
-  SESION.equipo.forEach(function(u){ DATOS[u] = {estado:'sin', ultHora:'', ultLat:null, ultLng:null, ubicTxt:'', bat:'', trail:[], dist:'', vend:''}; });
+  SESION.equipo.forEach(function(u){ DATOS[u] = {estado:'sin', ultHora:'', ultLat:null, ultLng:null, ubicTxt:'', bat:'', trail:[], dist:'', vend:'',
+    inicio:null, cambioConVend:null, fin:null, ventasPDV:[], nPedidos:0, totalS:0}; });
 
-  // Marcaciones → estado del día (la última marca manda)
-  marcas.forEach(function(r){
+  // Marcaciones: estado (la última manda) + HITOS (inicio / cambio a con vendedor / fin)
+  var marcasOrd = marcas.slice().sort(function(a,b){ return String(a[M.hora])<String(b[M.hora])?-1:1; });
+  marcasOrd.forEach(function(r){
     var u = String(r[M.usuario]).trim();
     if(!DATOS[u]) return;
     var d = DATOS[u];
     var hora = String(r[M.hora]||'');
-    if(hora >= (d._ultMarcaHora||'')){   // nos quedamos con la marca más reciente
-      d._ultMarcaHora = hora;
-      var tipo = String(r[M.tipo]||'').toUpperCase();
-      var vendN = String(r[M.vend]||'').trim();
-      var tieneVend = vendN && !/esperando|por confirmar/i.test(vendN) && vendN.toUpperCase()!=='SOLA';
-      // Con vendedor si: corrigió a CONVEND, o inició directo con un vendedor real
-      d.estado = (tipo==='FIN') ? 'fin' : ((tipo==='CONVEND' || (tipo==='INICIO' && tieneVend)) ? 'conv' : 'sola');
-      d.dist = String(r[M.dist]||''); d.vend = vendN;
-      var la=parseFloat(r[M.lat]), ln=parseFloat(r[M.lng]);
-      if(!isNaN(la)&&!isNaN(ln)&&enPeru(la,ln)){ d.ultLat=la; d.ultLng=ln; d.ultHora=hora; d.ubicTxt=String(r[M.ubic]||''); }
+    var tipo = String(r[M.tipo]||'').toUpperCase();
+    var vendN = String(r[M.vend]||'').trim();
+    var tieneVend = vendN && !/esperando|por confirmar/i.test(vendN) && vendN.toUpperCase()!=='SOLA';
+    var la=parseFloat(r[M.lat]), ln=parseFloat(r[M.lng]);
+    var pos = (!isNaN(la)&&!isNaN(ln)&&enPeru(la,ln)) ? [la,ln] : null;
+    // Hito INICIO (el primero del día)
+    if(tipo==='INICIO' && !d.inicio){
+      d.inicio = { hora:hora, conVend:tieneVend, vend:vendN, lat:pos?pos[0]:null, lng:pos?pos[1]:null, ubic:String(r[M.ubic]||'') };
     }
+    // Hito: pasó a CON VENDEDOR en ruta (corrección)
+    if(tipo==='CONVEND' && !d.cambioConVend){
+      d.cambioConVend = { hora:hora, vend:vendN, lat:pos?pos[0]:null, lng:pos?pos[1]:null };
+    }
+    // Hito FIN
+    if(tipo==='FIN'){
+      d.fin = { hora:hora, lat:pos?pos[0]:null, lng:pos?pos[1]:null, ubic:String(r[M.ubic]||'') };
+    }
+    // Estado = según la última marca (vamos en orden; la última gana)
+    d.estado = (tipo==='FIN') ? 'fin' : ((tipo==='CONVEND' || (tipo==='INICIO' && tieneVend)) ? 'conv' : 'sola');
+    d.dist = String(r[M.dist]||''); d.vend = vendN;
+    if(pos){ d.ultLat=pos[0]; d.ultLng=pos[1]; d.ultHora=hora; d.ubicTxt=String(r[M.ubic]||''); }
   });
 
   // Ubicaciones → recorrido + última posición real (más fresca que la marcación)
@@ -310,7 +358,6 @@ function procesar(marcas, ubics){
     var d = DATOS[u];
     d.trail.push([la,ln,String(r[U.hora]||'')]);
   });
-  // ordenar trail por hora, FILTRAR errores de GPS (puntos lejísimos del resto) y fijar última posición
   Object.keys(DATOS).forEach(function(u){
     var d = DATOS[u];
     d.trail.sort(function(a,b){ return a[2]<b[2]?-1:1; });
@@ -319,7 +366,60 @@ function procesar(marcas, ubics){
       var last = d.trail[d.trail.length-1];
       d.ultLat=last[0]; d.ultLng=last[1]; if(last[2]) d.ultHora=last[2];
     }
+    // Si el inicio no traía coordenada válida, usamos el PRIMER punto del recorrido
+    if(d.inicio && d.inicio.lat==null && d.trail.length){ d.inicio.lat=d.trail[0][0]; d.inicio.lng=d.trail[0][1]; }
   });
+
+  // Ventas del día → agrupadas por PDV y ubicadas en el recorrido (punto más cercano en hora)
+  procesarVentas(ventas||[]);
+}
+
+// Convierte "HH:mm:ss" (o una fecha larga) a segundos del día. -1 si no se puede.
+function hhmmssToSeg(h){
+  var s = String(h||'');
+  if(s.length>10 && s.indexOf('T')>=0) s = s.slice(11,19);
+  var p = s.split(':'); if(p.length<2) return -1;
+  return (Number(p[0])||0)*3600 + (Number(p[1])||0)*60 + (Number(p[2])||0);
+}
+// Punto del recorrido con la hora más cercana a la de la venta
+function pingMasCercano(trail, hora){
+  if(!trail || !trail.length) return null;
+  var t = hhmmssToSeg(hora);
+  if(t<0){ var u0=trail[trail.length-1]; return [u0[0],u0[1]]; }
+  var best=null, bd=1e9;
+  for(var i=0;i<trail.length;i++){
+    var tt=hhmmssToSeg(trail[i][2]); if(tt<0) continue;
+    var df=Math.abs(tt-t); if(df<bd){ bd=df; best=trail[i]; }
+  }
+  if(!best){ var u1=trail[trail.length-1]; return [u1[0],u1[1]]; }
+  return [best[0],best[1]];
+}
+function procesarVentas(ventas){
+  var grupos = {};  // clave usuario||PDV → visita agrupada
+  ventas.forEach(function(r){
+    var u = String(r[V.usuario]).trim(); if(!DATOS[u]) return;
+    var pdv = String(r[V.pdv]||'').trim() || '(sin PDV)';
+    var key = u+'||'+pdv;
+    if(!grupos[key]) grupos[key] = { u:u, pdv:pdv, hora:String(r[V.hora]||''), dist:String(r[V.dist]||''),
+      pedido:false, productos:0, unidades:0, total:0, causales:{} };
+    var g = grupos[key];
+    var h = String(r[V.hora]||''); if(h && (!g.hora || h < g.hora)) g.hora = h;  // hora de visita = más temprana
+    var pedidoSi = /^s/i.test(String(r[V.pedido]||''));   // "SI"
+    var ean  = String(r[V.ean]||'').trim();
+    var cant = parseFloat(r[V.cant])||0;
+    var tot  = parseFloat(r[V.total])||0;
+    if(pedidoSi || ean || cant>0){ g.pedido = g.pedido || pedidoSi || cant>0; if(ean||cant>0) g.productos++; g.unidades += cant; g.total += tot; }
+    var cau = String(r[V.causal]||'').trim(); if(cau) g.causales[cau] = (g.causales[cau]||0)+1;
+  });
+  Object.keys(grupos).forEach(function(key){
+    var g = grupos[key]; var d = DATOS[g.u]; if(!d) return;
+    var pos = pingMasCercano(d.trail, g.hora);
+    g.lat = pos?pos[0]:null; g.lng = pos?pos[1]:null;
+    d.ventasPDV.push(g);
+    if(g.pedido){ d.nPedidos++; }
+    d.totalS += g.total;
+  });
+  Object.keys(DATOS).forEach(function(u){ DATOS[u].ventasPDV.sort(function(a,b){ return a.hora<b.hora?-1:1; }); });
 }
 
 // Descarta lecturas de GPS erróneas por DENSIDAD: mantiene solo los puntos que tienen
@@ -373,8 +473,13 @@ function render(){
     else {
       if(d.ultHora) h+='Última señal: <b>'+d.ultHora+'</b><br>';
       if(d.ubicTxt) h+='📍 '+d.ubicTxt+'<br>';
-      if(d.dist) h+='Distribuidora: <b>'+d.dist+'</b>';
-      if(d.trail.length) h+='<br>Puntos de recorrido: <b>'+d.trail.length+'</b>';
+      if(d.dist) h+='Distribuidora: <b>'+d.dist+'</b><br>';
+      var vn = String(d.vend||'').trim();
+      var vendReal = vn && !/esperando|por confirmar/i.test(vn) && vn.toUpperCase()!=='SOLA';
+      if(d.estado==='conv' && vendReal) h+='👤 Vendedor: <b>'+vn+'</b><br>';
+      else if(d.estado==='sola') h+='👤 <b>Sola</b> (esperando vendedor)<br>';
+      if(d.ventasPDV.length) h+='<span class="ventas-tag">🛒 '+d.nPedidos+' venta'+(d.nPedidos===1?'':'s')+(d.totalS>0?(' · S/ '+d.totalS.toFixed(2)):'')+'</span>';
+      else h+='<span class="ventas-tag cero">🛒 Sin ventas aún</span>';
     }
     h+='</div></div>';
   });
@@ -386,17 +491,27 @@ function render(){
 function iconPin(color){
   return L.divIcon({className:'', html:'<div class="pin" style="background:'+color+'"></div>', iconSize:[16,16], iconAnchor:[8,16]});
 }
+// Pin grande para los hitos (con un carácter adentro: I/V/F)
+function iconHito(color, letra){
+  return L.divIcon({className:'', html:'<div class="pin-lg" style="background:'+color+'"><span>'+(letra||'')+'</span></div>', iconSize:[22,22], iconAnchor:[11,22]});
+}
+function iconVenta(conVta){
+  return L.divIcon({className:'', html:'<div class="sale-badge'+(conVta?'':' novta')+'">'+(conVta?'$':'·')+'</div>', iconSize:[26,26], iconAnchor:[13,13]});
+}
 function colorEst(est){ return est==='conv'?'#16A34A':est==='sola'?'#F59E0B':est==='fin'?'#64748B':'#CBD5E1'; }
+function horaMM(h){ var s=String(h||''); return s.length>10&&s.indexOf('T')>=0 ? s.slice(11,16) : s.slice(0,5); }
 
 function pintarMapa(){
   CAPA.clearLayers();
+  document.getElementById('legend').style.display = SELECCION ? 'block' : 'none';
   var pts=[];
+
+  // Pines del equipo (los no seleccionados)
   SESION.equipo.forEach(function(u){
     var d=DATOS[u];
     if(d.ultLat==null) return;
-    // Si hay una promotora seleccionada, su pin se dibuja aparte (resaltado) más abajo
-    if(SELECCION && u===SELECCION) { pts.push([d.ultLat,d.ultLng]); return; }
-    var atenua = SELECCION ? 0.35 : 1;   // atenúa a las demás cuando hay una seleccionada
+    if(SELECCION && u===SELECCION){ pts.push([d.ultLat,d.ultLng]); return; }
+    var atenua = SELECCION ? 0.35 : 1;
     var mk = L.marker([d.ultLat,d.ultLng],{icon:iconPin(colorEst(d.estado)), opacity:atenua}).addTo(CAPA);
     mk.bindPopup('<strong>'+nom(u)+'</strong><br>'+
                  (d.ultHora?('Última señal: '+d.ultHora+'<br>'):'')+
@@ -405,36 +520,83 @@ function pintarMapa(){
     pts.push([d.ultLat,d.ultLng]);
   });
 
-  // ── Promotora seleccionada: recorrido (puntitos tipo Google Maps) o, si no hay
-  //    señales GPS todavía, al menos su última posición marcada ──
+  // ── Promotora seleccionada: recorrido + hitos + ventas ──
   if(SELECCION && DATOS[SELECCION]){
     var dSel = DATOS[SELECCION];
     var trail = dSel.trail || [];
     var tr = trail.map(function(p){return [p[0],p[1]];});
+    var foco = [];   // puntos a los que encuadrar el mapa
 
-    if(tr.length>0){
-      // línea tenue que une los puntos (el "hilo" del recorrido)
-      if(tr.length>1) L.polyline(tr,{color:'#0EA5F9',weight:2,opacity:.45}).addTo(CAPA);
-      // un puntito por cada señal de GPS
-      trail.forEach(function(p,i){
-        var esUltimo = (i===trail.length-1);
-        L.circleMarker([p[0],p[1]],{
-          radius: esUltimo?7:4.5,
-          color:'#fff', weight: esUltimo?3:1.5,
-          fillColor: esUltimo?'#16A34A':'#0EA5F9', fillOpacity:1
-        }).addTo(CAPA).bindTooltip((p[2]?('Señal '+(i+1)+' · '+p[2].slice(11,16)):('Señal '+(i+1))),{direction:'top'});
-      });
-      MAPA.fitBounds(L.latLngBounds(tr).pad(0.25), {maxZoom:16});
-    } else if(dSel.ultLat!=null){
-      // sin recorrido aún: pin resaltado y acercamos a su posición
-      L.circleMarker([dSel.ultLat,dSel.ultLng],{
-        radius:8, color:'#fff', weight:3, fillColor:colorEst(dSel.estado), fillOpacity:1
-      }).addTo(CAPA).bindTooltip(nom(SELECCION)+(dSel.ultHora?(' · '+dSel.ultHora):''),{direction:'top'});
-      MAPA.setView([dSel.ultLat,dSel.ultLng], 15, {animate:true});
-    } else if(pts.length){
-      // la promotora seleccionada no tiene ninguna posición → mostramos el equipo
-      MAPA.fitBounds(L.latLngBounds(pts).pad(0.3));
+    // 1) LÍNEA DEL RECORRIDO — clara: trazo blanco de fondo + azul encima
+    if(tr.length>1){
+      L.polyline(tr,{color:'#fff', weight:7, opacity:.9}).addTo(CAPA);
+      L.polyline(tr,{color:'#0EA5F9', weight:4, opacity:1}).addTo(CAPA);
     }
+    // puntitos intermedios suaves (para ver cada señal sin tapar la línea)
+    trail.forEach(function(p,i){
+      if(i===trail.length-1) return; // el último es "Aquí ahora" (abajo)
+      L.circleMarker([p[0],p[1]],{radius:3, color:'#0EA5F9', weight:1, fillColor:'#fff', fillOpacity:1})
+        .addTo(CAPA).bindTooltip('Señal '+(i+1)+(p[2]?(' · '+horaMM(p[2])):''),{direction:'top'});
+      foco.push([p[0],p[1]]);
+    });
+
+    // 2) HITO: INICIO (sola / con vendedor)
+    if(dSel.inicio && dSel.inicio.lat!=null){
+      var cv = dSel.inicio.conVend;
+      var col = cv ? '#16A34A' : '#F59E0B';
+      var txt = (cv ? 'Inició con vendedor' : 'Inició sola') + (dSel.inicio.hora?(' · '+horaMM(dSel.inicio.hora)):'');
+      L.marker([dSel.inicio.lat,dSel.inicio.lng],{icon:iconHito(col,'I')}).addTo(CAPA)
+        .bindTooltip(txt,{permanent:true, direction:'right', className:'hito-lbl '+(cv?'conv':'sola'), offset:[10,-8]});
+      foco.push([dSel.inicio.lat,dSel.inicio.lng]);
+    }
+    // 3) HITO: pasó a CON VENDEDOR en ruta (corrección)
+    if(dSel.cambioConVend && dSel.cambioConVend.lat!=null){
+      L.marker([dSel.cambioConVend.lat,dSel.cambioConVend.lng],{icon:iconHito('#16A34A','V')}).addTo(CAPA)
+        .bindTooltip('Pasó a con vendedor · '+horaMM(dSel.cambioConVend.hora),{permanent:true, direction:'right', className:'hito-lbl conv', offset:[10,-8]});
+      foco.push([dSel.cambioConVend.lat,dSel.cambioConVend.lng]);
+    }
+    // 4) HITO: FIN de ruta
+    if(dSel.fin && dSel.fin.lat!=null){
+      L.marker([dSel.fin.lat,dSel.fin.lng],{icon:iconHito('#64748B','F')}).addTo(CAPA)
+        .bindTooltip('Cerró ruta · '+horaMM(dSel.fin.hora),{permanent:true, direction:'right', className:'hito-lbl fin', offset:[10,-8]});
+      foco.push([dSel.fin.lat,dSel.fin.lng]);
+    }
+
+    // 5) VENTAS por PDV a lo largo del recorrido (mini-resumen al hacer clic)
+    dSel.ventasPDV.forEach(function(g){
+      if(g.lat==null) return;
+      var pop = '<div class="vta-pop"><strong>🛒 '+g.pdv+'</strong><br>'+
+                (g.hora?('Hora: '+horaMM(g.hora)+'<br>'):'')+
+                (g.dist?('Distribuidora: '+g.dist+'<br>'):'');
+      if(g.pedido){
+        pop += 'Pedido: <b>Sí</b><br>Productos: <b>'+g.productos+'</b> · Unidades: <b>'+Math.round(g.unidades)+'</b><br>'+
+               '<span class="tot">Total: S/ '+g.total.toFixed(2)+'</span>';
+      } else {
+        var caus = Object.keys(g.causales);
+        pop += 'Pedido: <b>No</b>'+(caus.length?('<br>Motivo: '+caus.join(', ')):'');
+      }
+      pop += '</div>';
+      L.marker([g.lat,g.lng],{icon:iconVenta(g.pedido)}).addTo(CAPA).bindPopup(pop);
+      foco.push([g.lat,g.lng]);
+    });
+
+    // 6) ACTUAL — dónde está ahora (último ping), resaltado + etiqueta permanente
+    if(trail.length){
+      var last = trail[trail.length-1];
+      L.circleMarker([last[0],last[1]],{radius:9, color:'#fff', weight:3, fillColor:'#16A34A', fillOpacity:1})
+        .addTo(CAPA).bindTooltip('Aquí ahora'+(last[2]?(' · '+horaMM(last[2])):''),{permanent:true, direction:'top', className:'hito-lbl act', offset:[0,-6]});
+      foco.push([last[0],last[1]]);
+    } else if(dSel.ultLat!=null){
+      L.circleMarker([dSel.ultLat,dSel.ultLng],{radius:9, color:'#fff', weight:3, fillColor:colorEst(dSel.estado), fillOpacity:1})
+        .addTo(CAPA).bindTooltip(nom(SELECCION)+(dSel.ultHora?(' · '+horaMM(dSel.ultHora)):''),{permanent:true, direction:'top', className:'hito-lbl act', offset:[0,-6]});
+      foco.push([dSel.ultLat,dSel.ultLng]);
+    }
+
+    // Encuadrar a todo lo de la promotora
+    if(foco.length>1) MAPA.fitBounds(L.latLngBounds(foco).pad(0.25), {maxZoom:16});
+    else if(foco.length===1) MAPA.setView(foco[0], 15, {animate:true});
+    else if(pts.length) MAPA.fitBounds(L.latLngBounds(pts).pad(0.3));
+
   } else if(pts.length){
     MAPA.fitBounds(L.latLngBounds(pts).pad(0.3));
   }
