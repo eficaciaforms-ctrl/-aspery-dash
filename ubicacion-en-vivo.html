@@ -100,6 +100,21 @@ header .ping-info{display:inline-flex;align-items:center;gap:5px;background:#0A2
 .legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:middle}
 .ventas-tag{font-size:11.5px;color:#15803D;font-weight:700}
 .ventas-tag.cero{color:var(--t3);font-weight:600}
+/* panel de detalle de la promotora seleccionada */
+.detalle{margin-top:10px;border-top:1px dashed var(--line);padding-top:10px}
+.btn-despl{width:100%;background:var(--blue);color:#fff;border-radius:9px;padding:9px;font-size:13px;font-weight:700;margin-bottom:9px}
+.btn-despl.on{background:var(--red)}
+.btn-despl:disabled{background:#CBD5E1;cursor:default}
+.hitos-mini{font-size:11.5px;color:var(--t2);line-height:1.8;margin-bottom:8px}
+.hitos-mini b{color:var(--t1)}
+.ping-ttl{font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px}
+.ping-list{max-height:220px;overflow-y:auto;border:1px solid var(--line);border-radius:9px}
+.ping-item{display:flex;align-items:center;gap:8px;padding:7px 10px;font-size:12.5px;color:var(--t1);border-bottom:1px solid var(--line);cursor:pointer}
+.ping-item:last-child{border-bottom:none}
+.ping-item:hover{background:#EFF6FF}
+.ping-item .pnum{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;background:var(--navy);color:#fff;border-radius:50%;font-size:11px;font-weight:700}
+.ping-vacio{font-size:12px;color:var(--t3);padding:8px 2px}
+.mover{width:30px;height:30px;transition:transform .15s linear;filter:drop-shadow(0 1px 2px rgba(0,0,0,.4))}
 
 @media(max-width:720px){
   .main{flex-direction:column}
@@ -245,6 +260,7 @@ var SESION = null;     // {user, nombre, equipo:[...]}
 var MAPA = null, CAPA = null;   // Leaflet
 var DATOS = {};        // por promotora: {estado, ultHora, ultLat, ultLng, ubicTxt, bat, trail:[...]}
 var SELECCION = null;
+var ANIM=null, ANIMANDO=false, ANIM_USER=null, ANIM_MK=null;   // reproducción de desplazamiento
 var timerRefresh = null;
 var ultActualiza = 0;
 
@@ -296,7 +312,7 @@ function programarRefresco(){
   var dot = document.getElementById('live-dot'), txt = document.getElementById('live-txt');
   if(esHoy){
     dot.classList.remove('off'); txt.textContent='en vivo';
-    timerRefresh = setInterval(function(){ if(!document.hidden) cargar(); }, REFRESH_MS);
+    timerRefresh = setInterval(function(){ if(!document.hidden && !ANIMANDO) cargar(); }, REFRESH_MS);
   } else {
     dot.classList.add('off'); txt.textContent='día pasado';
   }
@@ -481,11 +497,38 @@ function render(){
       if(d.ventasPDV.length) h+='<span class="ventas-tag">🛒 '+d.nPedidos+' venta'+(d.nPedidos===1?'':'s')+(d.totalS>0?(' · S/ '+d.totalS.toFixed(2)):'')+'</span>';
       else h+='<span class="ventas-tag cero">🛒 Sin ventas aún</span>';
     }
-    h+='</div></div>';
+    h+='</div>'; // cierra .meta
+    if(u===SELECCION && d.estado!=='sin') h+=detalleHTML(u,d);
+    h+='</div>'; // cierra .row
   });
   document.getElementById('list-body').innerHTML = h || '<div class="empty">Sin datos para este día.</div>';
 
   pintarMapa();
+}
+
+// Panel desplegable de la promotora seleccionada: botón de reproducción + hitos + horas exactas
+function detalleHTML(u,d){
+  var n = d.trail.length;
+  var playing = (ANIM_USER===u && ANIMANDO);
+  var s = '<div class="detalle" onclick="event.stopPropagation()">';
+  s += '<button class="btn-despl'+(playing?' on':'')+'"'+(n<2&&!playing?' disabled':'')+' onclick="'+(playing?'detenerDesplazamiento()':'reproducirDesplazamiento(\''+u+'\')')+'">'+(playing?'⏸ Detener':'▶ Ver desplazamiento')+'</button>';
+  s += '<div class="hitos-mini">';
+  if(d.inicio) s += '<div>'+(d.inicio.conVend?'🟢':'🟡')+' Inicio: <b>'+horaMM(d.inicio.hora)+'</b> '+(d.inicio.conVend?'(con vendedor)':'(sola)')+'</div>';
+  if(d.cambioConVend) s += '<div>🟢 Pasó a con vendedor: <b>'+horaMM(d.cambioConVend.hora)+'</b></div>';
+  if(d.fin) s += '<div>⚫ Cerró ruta: <b>'+horaMM(d.fin.hora)+'</b></div>';
+  s += '</div>';
+  s += '<div class="ping-ttl">Ubicaciones registradas ('+n+')</div>';
+  if(n){
+    s += '<div class="ping-list">';
+    d.trail.forEach(function(p,i){
+      s += '<div class="ping-item" onclick="irAPing(\''+u+'\','+i+')"><span class="pnum">'+(i+1)+'</span> '+horaMM(p[2])+'</div>';
+    });
+    s += '</div>';
+  } else {
+    s += '<div class="ping-vacio">Aún no hay señales de GPS hoy.</div>';
+  }
+  s += '</div>';
+  return s;
 }
 
 function iconPin(color){
@@ -502,6 +545,7 @@ function colorEst(est){ return est==='conv'?'#16A34A':est==='sola'?'#F59E0B':est
 function horaMM(h){ var s=String(h||''); return s.length>10&&s.indexOf('T')>=0 ? s.slice(11,16) : s.slice(0,5); }
 
 function pintarMapa(){
+  if(ANIMANDO) return;   // durante la reproducción, el mapa lo controla la animación
   CAPA.clearLayers();
   document.getElementById('legend').style.display = SELECCION ? 'block' : 'none';
   var pts=[];
@@ -603,8 +647,72 @@ function pintarMapa(){
 }
 
 function seleccionar(u){
+  if(ANIMANDO) detenerDesplazamiento();
   SELECCION = (SELECCION===u) ? null : u;
   render();
+}
+
+// Salta el mapa a una ubicación específica del recorrido
+function irAPing(u,i){
+  var d=DATOS[u]; if(!d||!d.trail[i]) return;
+  var p=d.trail[i];
+  MAPA.setView([p[0],p[1]], 17, {animate:true});
+  L.popup().setLatLng([p[0],p[1]]).setContent('<strong>Señal '+(i+1)+'</strong><br>'+horaMM(p[2])).openOn(MAPA);
+}
+
+// Flecha direccional tipo Waze (apunta al norte; se rota según el rumbo)
+function iconMover(deg){
+  return L.divIcon({className:'', iconSize:[30,30], iconAnchor:[15,15],
+    html:'<div class="mover" style="transform:rotate('+deg+'deg)"><svg viewBox="0 0 24 24" width="30" height="30"><path d="M12 2 L20 20 L12 15 L4 20 Z" fill="#0EA5F9" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg></div>'});
+}
+function rumbo(a,b){
+  var lat=(a[0]+b[0])/2*Math.PI/180;
+  var dLat=b[0]-a[0], dLng=(b[1]-a[1])*Math.cos(lat);
+  return Math.atan2(dLng, dLat)*180/Math.PI;
+}
+
+// ▶ Reproduce el desplazamiento de la promotora desde el inicio, punto por punto
+function reproducirDesplazamiento(u){
+  var d=DATOS[u]; if(!d || d.trail.length<2) return;
+  detenerDesplazamiento();
+  SELECCION=u; ANIMANDO=true; ANIM_USER=u;
+  var full = d.trail.map(function(p){return [p[0],p[1]];});
+  CAPA.clearLayers();
+  document.getElementById('legend').style.display='block';
+  // ruta completa tenue de fondo
+  L.polyline(full,{color:'#CBD5E1', weight:4, opacity:.8}).addTo(CAPA);
+  // marca de inicio
+  var colIni = (d.inicio && d.inicio.conVend) ? '#16A34A' : '#F59E0B';
+  L.circleMarker(full[0],{radius:7,color:'#fff',weight:2,fillColor:colIni,fillOpacity:1}).addTo(CAPA)
+    .bindTooltip('Inicio · '+horaMM(d.trail[0][2]),{permanent:true,direction:'left',className:'hito-lbl',offset:[-8,0]});
+  MAPA.fitBounds(L.latLngBounds(full).pad(0.25),{maxZoom:16});
+  // capa dinámica: línea que crece + flecha
+  var trazado=[full[0]];
+  var linea=L.polyline(trazado,{color:'#0EA5F9', weight:5, opacity:1}).addTo(CAPA);
+  ANIM_MK=L.marker(full[0],{icon:iconMover(0), zIndexOffset:1000}).addTo(CAPA);
+  ANIM_MK.bindTooltip(horaMM(d.trail[0][2]),{permanent:true,direction:'top',className:'hito-lbl act',offset:[0,-12]});
+  render();  // el botón pasa a "Detener"
+  var i=1, n=full.length;
+  var paso=Math.max(120, Math.min(800, Math.round(20000/n)));  // ~20s en total
+  ANIM=setInterval(function(){
+    if(i>=n){ finDesplazamiento(u); return; }
+    var prev=full[i-1], cur=full[i];
+    trazado.push(cur); linea.setLatLngs(trazado);
+    ANIM_MK.setLatLng(cur); ANIM_MK.setIcon(iconMover(rumbo(prev,cur)));
+    ANIM_MK.setTooltipContent(horaMM(d.trail[i][2]));
+    MAPA.panTo(cur,{animate:true,duration:.25});
+    i++;
+  }, paso);
+}
+function finDesplazamiento(u){
+  if(ANIM){ clearInterval(ANIM); ANIM=null; }
+  ANIMANDO=false; ANIM_USER=null; ANIM_MK=null;
+  render();  // redibuja la vista normal (con hitos, ventas y "Aquí ahora")
+}
+function detenerDesplazamiento(){
+  if(ANIM){ clearInterval(ANIM); ANIM=null; }
+  ANIMANDO=false; ANIM_USER=null; ANIM_MK=null;
+  if(SELECCION) render();
 }
 
 // ── Arranque: ¿sesión guardada? ──
