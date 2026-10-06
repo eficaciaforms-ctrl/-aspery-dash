@@ -94,10 +94,12 @@ header .ping-info{display:inline-flex;align-items:center;gap:5px;background:#0A2
 .sale-badge.novta{background:#94A3B8}
 .vta-pop strong{color:var(--navy)}
 .vta-pop .tot{color:#15803D;font-weight:800}
-/* leyenda del mapa */
-.legend{position:absolute;bottom:14px;left:14px;z-index:600;background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:10px;padding:8px 11px;font-size:11px;line-height:1.7;box-shadow:0 2px 8px rgba(0,0,0,.15)}
-.legend b{display:block;font-size:10.5px;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
-.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:middle}
+/* leyenda horizontal (barra superior, debajo de los contadores) */
+.legendbar{display:flex;flex-wrap:wrap;align-items:center;gap:7px 16px;background:var(--card);border-bottom:1px solid var(--line);padding:9px 16px;font-size:11.5px;color:var(--t2)}
+.legendbar b{color:var(--t1);font-weight:700;margin-right:2px}
+.legendbar span{display:inline-flex;align-items:center;white-space:nowrap}
+.legendbar i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:6px;vertical-align:middle;font-style:normal}
+.legendbar i.dollar{width:14px;height:14px;background:#16A34A;color:#fff;font-size:9px;font-weight:800;text-align:center;line-height:14px;border-radius:50%}
 .ventas-tag{font-size:11.5px;color:#15803D;font-weight:700}
 .ventas-tag.cero{color:var(--t3);font-weight:600}
 /* panel de detalle de la promotora seleccionada */
@@ -160,20 +162,21 @@ header .ping-info{display:inline-flex;align-items:center;gap:5px;background:#0A2
     <div class="stat"><div class="n" id="s-sin">0</div><div class="l">Sin iniciar</div></div>
   </div>
 
+  <div class="legendbar" id="legend">
+    <b>En el mapa:</b>
+    <span><i style="background:#F59E0B"></i>Inició sola</span>
+    <span><i style="background:#16A34A"></i>Inició / pasó con vendedor</span>
+    <span><i style="background:#16A34A;box-shadow:0 0 0 3px rgba(22,163,74,.3)"></i>Dónde está ahora</span>
+    <span><i style="background:#64748B"></i>Cerró ruta</span>
+    <span><i class="dollar">$</i>Venta registrada (clic para ver)</span>
+  </div>
+
   <div class="main">
     <div class="list">
       <div class="ltitle" id="list-title">Equipo</div>
       <div id="list-body"></div>
     </div>
     <div id="map"></div>
-    <div class="legend" id="legend" style="display:none">
-      <b>Al seleccionar una promotora</b>
-      <div><i style="background:#F59E0B"></i>Inició sola</div>
-      <div><i style="background:#16A34A"></i>Inició / pasó con vendedor</div>
-      <div><i style="background:#16A34A;box-shadow:0 0 0 3px rgba(22,163,74,.3)"></i>Dónde está ahora</div>
-      <div><i style="background:#64748B"></i>Cerró ruta</div>
-      <div><span style="display:inline-block;width:12px;height:12px;background:#16A34A;border-radius:50%;color:#fff;font-size:8px;text-align:center;line-height:12px;margin-right:4px">$</span>Venta registrada (clic para ver)</div>
-    </div>
   </div>
 
   <div class="foot">Aspery · Desarrollado por SPG · <span id="foot-upd"></span></div>
@@ -390,12 +393,17 @@ function procesar(marcas, ubics, ventas){
   procesarVentas(ventas||[]);
 }
 
-// Convierte "HH:mm:ss" (o una fecha larga) a segundos del día. -1 si no se puede.
+// Convierte una hora a SEGUNDOS del día EN HORA DE PERÚ. -1 si no se puede.
+// • "1899-12-30T17:53:32.000Z"  → viene en UTC (así lo serializa Google Sheets) → le resta 5h → Perú.
+// • "12:53:32"                   → ya está en hora local → se usa tal cual.
 function hhmmssToSeg(h){
-  var s = String(h||'');
-  if(s.length>10 && s.indexOf('T')>=0) s = s.slice(11,19);
-  var p = s.split(':'); if(p.length<2) return -1;
-  return (Number(p[0])||0)*3600 + (Number(p[1])||0)*60 + (Number(p[2])||0);
+  var s = String(h||''); if(!s) return -1;
+  var esUTC = (s.indexOf('T')>=0);
+  var t = esUTC ? s.slice(11,19) : s;
+  var p = t.split(':'); if(p.length<2) return -1;
+  var sec = (Number(p[0])||0)*3600 + (Number(p[1])||0)*60 + (Number(p[2])||0);
+  if(esUTC) sec -= 18000;                      // UTC → Perú (UTC−5)
+  return ((sec%86400)+86400)%86400;
 }
 // Punto del recorrido con la hora más cercana a la de la venta
 function pingMasCercano(trail, hora){
@@ -487,7 +495,7 @@ function render(){
     h+='<div class="meta">';
     if(d.estado==='sin'){ h+='Aún no marca inicio hoy.'; }
     else {
-      if(d.ultHora) h+='Última señal: <b>'+d.ultHora+'</b><br>';
+      if(d.ultHora) h+='Última señal: <b>'+horaMM(d.ultHora)+'</b><br>';
       if(d.ubicTxt) h+='📍 '+d.ubicTxt+'<br>';
       if(d.dist) h+='Distribuidora: <b>'+d.dist+'</b><br>';
       var vn = String(d.vend||'').trim();
@@ -542,12 +550,12 @@ function iconVenta(conVta){
   return L.divIcon({className:'', html:'<div class="sale-badge'+(conVta?'':' novta')+'">'+(conVta?'$':'·')+'</div>', iconSize:[26,26], iconAnchor:[13,13]});
 }
 function colorEst(est){ return est==='conv'?'#16A34A':est==='sola'?'#F59E0B':est==='fin'?'#64748B':'#CBD5E1'; }
-function horaMM(h){ var s=String(h||''); return s.length>10&&s.indexOf('T')>=0 ? s.slice(11,16) : s.slice(0,5); }
+function horaMM(h){ var sec=hhmmssToSeg(h); if(sec<0) return String(h||'').slice(0,5); var hh=Math.floor(sec/3600), mm=Math.floor((sec%3600)/60); return (hh<10?'0':'')+hh+':'+(mm<10?'0':'')+mm; }
 
 function pintarMapa(){
   if(ANIMANDO) return;   // durante la reproducción, el mapa lo controla la animación
   CAPA.clearLayers();
-  document.getElementById('legend').style.display = SELECCION ? 'block' : 'none';
+  document.getElementById('legend').style.display = 'flex';
   var pts=[];
 
   // Pines del equipo (los no seleccionados)
@@ -558,7 +566,7 @@ function pintarMapa(){
     var atenua = SELECCION ? 0.35 : 1;
     var mk = L.marker([d.ultLat,d.ultLng],{icon:iconPin(colorEst(d.estado)), opacity:atenua}).addTo(CAPA);
     mk.bindPopup('<strong>'+nom(u)+'</strong><br>'+
-                 (d.ultHora?('Última señal: '+d.ultHora+'<br>'):'')+
+                 (d.ultHora?('Última señal: '+horaMM(d.ultHora)+'<br>'):'')+
                  (d.ubicTxt?('📍 '+d.ubicTxt):''));
     mk.on('click',function(){ seleccionar(u); });
     pts.push([d.ultLat,d.ultLng]);
@@ -678,7 +686,7 @@ function reproducirDesplazamiento(u){
   SELECCION=u; ANIMANDO=true; ANIM_USER=u;
   var full = d.trail.map(function(p){return [p[0],p[1]];});
   CAPA.clearLayers();
-  document.getElementById('legend').style.display='block';
+  document.getElementById('legend').style.display='flex';
   // ruta completa tenue de fondo
   L.polyline(full,{color:'#CBD5E1', weight:4, opacity:.8}).addTo(CAPA);
   // marca de inicio

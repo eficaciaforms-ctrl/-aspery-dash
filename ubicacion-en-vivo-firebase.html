@@ -19,7 +19,8 @@
   --bg:#F1F5F9; --card:#FFFFFF; --line:#E2E8F0; --t1:#0F172A; --t2:#475569; --t3:#94A3B8;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t1);-webkit-font-smoothing:antialiased}
+html,body{height:100%}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t1);-webkit-font-smoothing:antialiased;overflow:hidden}
 button{font-family:inherit;cursor:pointer;border:none}
 input{font-family:inherit}
 
@@ -37,7 +38,7 @@ input{font-family:inherit}
 #login .err{font-size:12.5px;color:var(--red);min-height:16px;margin-bottom:8px;font-weight:600}
 
 /* APP */
-#app{display:none;min-height:100vh;flex-direction:column}
+#app{display:none;height:100vh;height:100dvh;flex-direction:column;overflow:hidden}
 header{background:var(--navy);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:500}
 header .brand{font-size:18px;font-weight:800;white-space:nowrap}
 header .brand b{color:var(--blue)}
@@ -49,6 +50,7 @@ header .dot.off{background:var(--gray);animation:none}
 header input[type=date]{background:#0A2A4E;border:1px solid #1E3A5F;color:#fff;border-radius:8px;padding:7px 10px;font-size:13px}
 header .who{font-size:12px;color:#CBD5E1}
 header .out{background:#1E3A5F;color:#fff;padding:7px 11px;border-radius:8px;font-size:12px;font-weight:600}
+header .ping-info{display:inline-flex;align-items:center;gap:5px;background:#0A2A4E;border:1px solid #1E3A5F;color:#BAE6FD;border-radius:999px;padding:5px 11px;font-size:11.5px;font-weight:700;white-space:nowrap}
 header .speed{font-size:11px;color:#4ade80;font-weight:700}
 
 .stats{display:flex;gap:10px;padding:12px 16px;flex-wrap:wrap;background:var(--card);border-bottom:1px solid var(--line)}
@@ -60,7 +62,7 @@ header .speed{font-size:11px;color:#4ade80;font-weight:700}
 .stat.b{border-color:var(--blue)} .stat.b .n{color:var(--blue-d)}
 .stat.x{border-color:var(--gray)} .stat.x .n{color:var(--gray)}
 
-.main{flex:1;display:flex;gap:0;min-height:0}
+.main{flex:1;display:flex;gap:0;min-height:0;position:relative;overflow:hidden}
 .list{width:340px;max-width:40%;overflow-y:auto;background:var(--card);border-right:1px solid var(--line)}
 .list .ltitle{font-size:12px;font-weight:700;color:var(--t2);padding:12px 16px 6px;text-transform:uppercase;letter-spacing:.04em}
 .row{padding:12px 16px;border-bottom:1px solid var(--line);cursor:pointer;transition:background .12s;border-left:4px solid transparent}
@@ -73,19 +75,46 @@ header .speed{font-size:11px;color:#4ade80;font-weight:700}
 .bdg.gray{background:#E2E8F0;color:#475569} .bdg.dark{background:#334155;color:#fff}
 .row .meta{font-size:12px;color:var(--t2);margin-top:5px;line-height:1.5}
 .row .meta b{color:var(--t1);font-weight:600}
-#map{flex:1;min-height:300px}
+#map{flex:1;min-height:0;height:100%}
 .empty{padding:40px 20px;text-align:center;color:var(--t3);font-size:13px}
 .loading{padding:40px 20px;text-align:center;color:var(--t3);font-size:13px}
 
 .foot{font-size:11px;color:var(--t3);text-align:center;padding:9px}
 .pin{width:16px;height:16px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.pin-lg{width:22px;height:22px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center}
+.pin-lg span{transform:rotate(45deg);font-size:11px;font-weight:800;color:#fff;line-height:1}
 .leaflet-popup-content{font-family:'Inter',sans-serif;font-size:12.5px}
 .leaflet-popup-content strong{color:var(--navy)}
+.hito-lbl{background:#fff;border:1.5px solid var(--line);border-radius:7px;padding:3px 7px;font-size:11px;font-weight:700;color:var(--navy);box-shadow:0 1px 4px rgba(0,0,0,.18);white-space:nowrap}
+.hito-lbl.conv{border-color:#16A34A;color:#15803D}
+.hito-lbl.sola{border-color:#F59E0B;color:#B45309}
+.hito-lbl.fin{border-color:#64748B;color:#334155}
+.hito-lbl.act{border-color:#16A34A;background:#16A34A;color:#fff}
+.sale-badge{background:#16A34A;color:#fff;border:2px solid #fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+.sale-badge.novta{background:#94A3B8}
+.vta-pop strong{color:var(--navy)} .vta-pop .tot{color:#15803D;font-weight:800}
+.legendbar{display:flex;flex-wrap:wrap;align-items:center;gap:7px 16px;background:var(--card);border-bottom:1px solid var(--line);padding:9px 16px;font-size:11.5px;color:var(--t2)}
+.legendbar b{color:var(--t1);font-weight:700;margin-right:2px}
+.legendbar span{display:inline-flex;align-items:center;white-space:nowrap}
+.legendbar i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:6px;vertical-align:middle;font-style:normal}
+.legendbar i.dollar{width:14px;height:14px;background:#16A34A;color:#fff;font-size:9px;font-weight:800;text-align:center;line-height:14px;border-radius:50%}
+.ventas-tag{font-size:11.5px;color:#15803D;font-weight:700} .ventas-tag.cero{color:var(--t3);font-weight:600}
+.detalle{margin-top:10px;border-top:1px dashed var(--line);padding-top:10px}
+.btn-despl{width:100%;background:var(--blue);color:#fff;border-radius:9px;padding:9px;font-size:13px;font-weight:700;margin-bottom:9px}
+.btn-despl.on{background:var(--red)} .btn-despl:disabled{background:#CBD5E1;cursor:default}
+.hitos-mini{font-size:11.5px;color:var(--t2);line-height:1.8;margin-bottom:8px} .hitos-mini b{color:var(--t1)}
+.ping-ttl{font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px}
+.ping-list{max-height:220px;overflow-y:auto;border:1px solid var(--line);border-radius:9px}
+.ping-item{display:flex;align-items:center;gap:8px;padding:7px 10px;font-size:12.5px;color:var(--t1);border-bottom:1px solid var(--line);cursor:pointer}
+.ping-item:last-child{border-bottom:none} .ping-item:hover{background:#EFF6FF}
+.ping-item .pnum{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;background:var(--navy);color:#fff;border-radius:50%;font-size:11px;font-weight:700}
+.ping-vacio{font-size:12px;color:var(--t3);padding:8px 2px}
+.mover{width:30px;height:30px;transition:transform .15s linear;filter:drop-shadow(0 1px 2px rgba(0,0,0,.4))}
 
 @media(max-width:720px){
   .main{flex-direction:column}
-  .list{width:100%;max-width:100%;max-height:42vh;border-right:none;border-bottom:1px solid var(--line)}
-  #map{min-height:46vh}
+  .list{width:100%;max-width:100%;flex:0 0 auto;max-height:38vh;overflow-y:auto;border-right:none;border-bottom:1px solid var(--line)}
+  #map{flex:1;min-height:0;height:auto}
   header .brand{font-size:16px}
 }
 </style>
@@ -113,6 +142,7 @@ header .speed{font-size:11px;color:#4ade80;font-weight:700}
     <div class="brand">Asper<b>y</b> · En Vivo</div>
     <input type="date" id="fecha" onchange="cambiarFecha()"/>
     <div class="live"><span class="dot" id="live-dot"></span><span id="live-txt">en vivo</span></div>
+    <span class="ping-info" id="ping-info">📍 Ubicación cada 1 min</span>
     <span class="speed" id="speed"></span>
     <div class="spacer"></div>
     <div class="who" id="who"></div>
@@ -124,6 +154,15 @@ header .speed{font-size:11px;color:#4ade80;font-weight:700}
     <div class="stat g"><div class="n" id="s-ven">0</div><div class="l">Con vendedor</div></div>
     <div class="stat x"><div class="n" id="s-fin">0</div><div class="l">Cerraron ruta</div></div>
     <div class="stat"><div class="n" id="s-sin">0</div><div class="l">Sin iniciar</div></div>
+  </div>
+
+  <div class="legendbar" id="legend">
+    <b>En el mapa:</b>
+    <span><i style="background:#F59E0B"></i>Inició sola</span>
+    <span><i style="background:#16A34A"></i>Inició / pasó con vendedor</span>
+    <span><i style="background:#16A34A;box-shadow:0 0 0 3px rgba(22,163,74,.3)"></i>Dónde está ahora</span>
+    <span><i style="background:#64748B"></i>Cerró ruta</span>
+    <span><i class="dollar">$</i>Venta registrada (clic para ver)</span>
   </div>
 
   <div class="main">
@@ -203,10 +242,13 @@ function fbConsultar(coll, fecha, cb){
    LÓGICA DE LA PÁGINA
    ═══════════════════════════════════════════════════════════════════════ */
 var SESION=null, MAPA=null, CAPA=null, DATOS={}, SELECCION=null, timerRefresh=null;
+var ANIM=null, ANIMANDO=false, ANIM_USER=null, ANIM_MK=null;   // reproducción de desplazamiento
 
 function hoyISO(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function nom(u){ return NOMBRES[u]||u; }
 function enPeru(lat,lng){ return lat<=-0.03 && lat>=-18.6 && lng>=-81.5 && lng<=-68.5; }
+// Muestra HH:mm venga la hora como "HH:mm:ss" o como fecha/hora completa
+function horaCorta(v){ var sec=hhmmssToSeg(v); if(sec<0) return String(v||'').slice(0,5); var hh=Math.floor(sec/3600), mm=Math.floor((sec%3600)/60); return (hh<10?'0':'')+hh+':'+(mm<10?'0':'')+mm; }
 
 function entrar(){
   var u=(document.getElementById('lg-user').value||'').trim().toUpperCase();
@@ -241,17 +283,17 @@ function programarRefresco(){
   if(timerRefresh) clearInterval(timerRefresh);
   var esHoy=document.getElementById('fecha').value===hoyISO();
   var dot=document.getElementById('live-dot'), txt=document.getElementById('live-txt');
-  if(esHoy){ dot.classList.remove('off'); txt.textContent='en vivo'; timerRefresh=setInterval(function(){ if(!document.hidden) cargar(); }, REFRESH_MS); }
+  if(esHoy){ dot.classList.remove('off'); txt.textContent='en vivo'; timerRefresh=setInterval(function(){ if(!document.hidden && !ANIMANDO) cargar(); }, REFRESH_MS); }
   else { dot.classList.add('off'); txt.textContent='día pasado'; }
 }
 
 function cargar(){
   var fecha=document.getElementById('fecha').value;
   var t0=performance.now();
-  var res={marcas:null, ubics:null};
+  var res={marcas:null, ubics:null, ventas:null};
   function listo(){
-    if(res.marcas!==null && res.ubics!==null){
-      procesar(res.marcas, res.ubics);
+    if(res.marcas!==null && res.ubics!==null && res.ventas!==null){
+      procesar(res.marcas, res.ubics, res.ventas);
       render();
       var ms=Math.round(performance.now()-t0);
       document.getElementById('speed').textContent='⚡ '+ms+' ms';
@@ -260,25 +302,29 @@ function cargar(){
   }
   fbConsultar('marcaciones', fecha, function(r){ res.marcas=r; listo(); });
   fbConsultar('ubicaciones', fecha, function(r){ res.ubics=r; listo(); });
+  fbConsultar('ventas',      fecha, function(r){ res.ventas=r; listo(); });
 }
 
-function procesar(marcas, ubics){
+function procesar(marcas, ubics, ventas){
   DATOS={};
-  SESION.equipo.forEach(function(u){ DATOS[u]={estado:'sin', ultHora:'', ultLat:null, ultLng:null, ubicTxt:'', dist:'', trail:[], _um:0}; });
-  // marcaciones → estado (la más reciente por 'orden')
-  marcas.forEach(function(m){
+  SESION.equipo.forEach(function(u){ DATOS[u]={estado:'sin', ultHora:'', ultLat:null, ultLng:null, ubicTxt:'', dist:'', trail:[], _um:0,
+    inicio:null, cambioConVend:null, fin:null, ventasPDV:[], nPedidos:0, totalS:0}; });
+  // marcaciones → estado (última por 'orden') + HITOS (inicio / cambio / fin)
+  var marcasOrd = (marcas||[]).slice().sort(function(a,b){ return Number(a.orden||0)-Number(b.orden||0); });
+  marcasOrd.forEach(function(m){
     var u=String(m.usuario||'').trim(); if(!DATOS[u]) return;
-    var d=DATOS[u]; var ord=Number(m.orden||0);
-    if(ord>=d._um){
-      d._um=ord;
-      var tipo=String(m.tipo||'').toUpperCase();
-      var vendN=String(m.vendedor||'').trim();
-      var tieneVend=vendN && !/esperando|por confirmar/i.test(vendN) && vendN.toUpperCase()!=='SOLA';
-      d.estado=(tipo==='FIN')?'fin':((tipo==='CONVEND'||(tipo==='INICIO'&&tieneVend))?'conv':'sola');
-      d.dist=m.dist||'';
-      var la=parseFloat(m.lat), ln=parseFloat(m.lng);
-      if(!isNaN(la)&&!isNaN(ln)&&enPeru(la,ln)){ d.ultLat=la; d.ultLng=ln; d.ultHora=m.hora||''; d.ubicTxt=m.ubic||''; }
-    }
+    var d=DATOS[u];
+    var tipo=String(m.tipo||'').toUpperCase();
+    var vendN=String(m.vendedor||'').trim();
+    var tieneVend=vendN && !/esperando|por confirmar/i.test(vendN) && vendN.toUpperCase()!=='SOLA';
+    var la=parseFloat(m.lat), ln=parseFloat(m.lng);
+    var pos=(!isNaN(la)&&!isNaN(ln)&&enPeru(la,ln))?[la,ln]:null;
+    if(tipo==='INICIO' && !d.inicio) d.inicio={hora:m.hora||'', conVend:tieneVend, vend:vendN, lat:pos?pos[0]:null, lng:pos?pos[1]:null, ubic:m.ubic||''};
+    if(tipo==='CONVEND' && !d.cambioConVend) d.cambioConVend={hora:m.hora||'', vend:vendN, lat:pos?pos[0]:null, lng:pos?pos[1]:null};
+    if(tipo==='FIN') d.fin={hora:m.hora||'', lat:pos?pos[0]:null, lng:pos?pos[1]:null, ubic:m.ubic||''};
+    d.estado=(tipo==='FIN')?'fin':((tipo==='CONVEND'||(tipo==='INICIO'&&tieneVend))?'conv':'sola');
+    d.dist=m.dist||''; d.vend=vendN;
+    if(pos){ d.ultLat=pos[0]; d.ultLng=pos[1]; d.ultHora=m.hora||''; d.ubicTxt=m.ubic||''; }
   });
   // ubicaciones → recorrido + última posición (ya vienen ordenadas por 'orden')
   ubics.forEach(function(p){
@@ -291,7 +337,54 @@ function procesar(marcas, ubics){
     var d=DATOS[u];
     d.trail = filtrarGPS(d.trail);
     if(d.trail.length){ var last=d.trail[d.trail.length-1]; d.ultLat=last[0]; d.ultLng=last[1]; if(last[2]) d.ultHora=last[2]; }
+    if(d.inicio && d.inicio.lat==null && d.trail.length){ d.inicio.lat=d.trail[0][0]; d.inicio.lng=d.trail[0][1]; }
   });
+  procesarVentas(ventas||[]);
+}
+// "HH:mm:ss" (o fecha larga) → segundos del día
+// Segundos del día EN HORA DE PERÚ. ISO con 'T'(…Z) viene en UTC → −5h; "HH:mm:ss" ya es local.
+function hhmmssToSeg(h){
+  var s=String(h||''); if(!s) return -1;
+  var esUTC=(s.indexOf('T')>=0);
+  var t=esUTC?s.slice(11,19):s;
+  var p=t.split(':'); if(p.length<2) return -1;
+  var sec=(Number(p[0])||0)*3600+(Number(p[1])||0)*60+(Number(p[2])||0);
+  if(esUTC) sec-=18000;
+  return ((sec%86400)+86400)%86400;
+}
+function pingMasCercano(trail, hora){
+  if(!trail||!trail.length) return null;
+  var t=hhmmssToSeg(hora); if(t<0){ var u0=trail[trail.length-1]; return [u0[0],u0[1]]; }
+  var best=null,bd=1e9;
+  for(var i=0;i<trail.length;i++){ var tt=hhmmssToSeg(trail[i][2]); if(tt<0) continue; var df=Math.abs(tt-t); if(df<bd){bd=df;best=trail[i];} }
+  if(!best){ var u1=trail[trail.length-1]; return [u1[0],u1[1]]; }
+  return [best[0],best[1]];
+}
+function procesarVentas(ventas){
+  var grupos={};
+  ventas.forEach(function(r){
+    var u=String(r.usuario||'').trim(); if(!DATOS[u]) return;
+    var pdv=String(r.pdv||'').trim()||'(sin PDV)';
+    var key=u+'||'+pdv;
+    if(!grupos[key]) grupos[key]={u:u,pdv:pdv,hora:String(r.hora||''),dist:String(r.dist||''),pedido:false,productos:0,unidades:0,total:0,causales:{}};
+    var g=grupos[key];
+    var h=String(r.hora||''); if(h && (!g.hora||h<g.hora)) g.hora=h;
+    var pedidoSi=/^s/i.test(String(r.pedido||''));
+    var ean=String(r.ean||'').trim();
+    var cant=parseFloat(r.cantidad)||0;
+    var tot=parseFloat(r.total)||0;
+    if(pedidoSi||ean||cant>0){ g.pedido=g.pedido||pedidoSi||cant>0; if(ean||cant>0) g.productos++; g.unidades+=cant; g.total+=tot; }
+    var cau=String(r.causal||'').trim(); if(cau) g.causales[cau]=(g.causales[cau]||0)+1;
+  });
+  Object.keys(grupos).forEach(function(key){
+    var g=grupos[key]; var d=DATOS[g.u]; if(!d) return;
+    var pos=pingMasCercano(d.trail, g.hora);
+    g.lat=pos?pos[0]:null; g.lng=pos?pos[1]:null;
+    d.ventasPDV.push(g);
+    if(g.pedido) d.nPedidos++;
+    d.totalS+=g.total;
+  });
+  Object.keys(DATOS).forEach(function(u){ DATOS[u].ventasPDV.sort(function(a,b){ return a.hora<b.hora?-1:1; }); });
 }
 // Descarta lecturas de GPS erróneas por densidad (elimina lecturas aisladas en otra ciudad)
 function filtrarGPS(trail){
@@ -328,43 +421,171 @@ function render(){
     h+='<div class="row'+sel+'" onclick="seleccionar(\''+u+'\')"><div class="top"><span class="nm">'+nom(u)+'</span>'+badge(d.estado)+'</div><div class="meta">';
     if(d.estado==='sin'){ h+='Aún no marca inicio hoy.'; }
     else {
-      if(d.ultHora) h+='Última señal: <b>'+d.ultHora+'</b><br>';
+      if(d.ultHora) h+='Última señal: <b>'+horaCorta(d.ultHora)+'</b><br>';
       if(d.ubicTxt) h+='📍 '+d.ubicTxt+'<br>';
-      if(d.dist) h+='Distribuidora: <b>'+d.dist+'</b>';
-      if(d.trail.length) h+='<br>Puntos de recorrido: <b>'+d.trail.length+'</b>';
+      if(d.dist) h+='Distribuidora: <b>'+d.dist+'</b><br>';
+      var vn=String(d.vend||'').trim();
+      var vendReal=vn && !/esperando|por confirmar/i.test(vn) && vn.toUpperCase()!=='SOLA';
+      if(d.estado==='conv' && vendReal) h+='👤 Vendedor: <b>'+vn+'</b><br>';
+      else if(d.estado==='sola') h+='👤 <b>Sola</b> (esperando vendedor)<br>';
+      if(d.ventasPDV.length) h+='<span class="ventas-tag">🛒 '+d.nPedidos+' venta'+(d.nPedidos===1?'':'s')+(d.totalS>0?(' · S/ '+d.totalS.toFixed(2)):'')+'</span>';
+      else h+='<span class="ventas-tag cero">🛒 Sin ventas aún</span>';
     }
-    h+='</div></div>';
+    h+='</div>';
+    if(u===SELECCION && d.estado!=='sin') h+=detalleHTML(u,d);
+    h+='</div>';
   });
   document.getElementById('list-body').innerHTML=h||'<div class="empty">Sin datos para este día.</div>';
   pintarMapa();
 }
 
+function detalleHTML(u,d){
+  var n=d.trail.length;
+  var playing=(ANIM_USER===u && ANIMANDO);
+  var s='<div class="detalle" onclick="event.stopPropagation()">';
+  s+='<button class="btn-despl'+(playing?' on':'')+'"'+(n<2&&!playing?' disabled':'')+' onclick="'+(playing?'detenerDesplazamiento()':'reproducirDesplazamiento(\''+u+'\')')+'">'+(playing?'⏸ Detener':'▶ Ver desplazamiento')+'</button>';
+  s+='<div class="hitos-mini">';
+  if(d.inicio) s+='<div>'+(d.inicio.conVend?'🟢':'🟡')+' Inicio: <b>'+horaCorta(d.inicio.hora)+'</b> '+(d.inicio.conVend?'(con vendedor)':'(sola)')+'</div>';
+  if(d.cambioConVend) s+='<div>🟢 Pasó a con vendedor: <b>'+horaCorta(d.cambioConVend.hora)+'</b></div>';
+  if(d.fin) s+='<div>⚫ Cerró ruta: <b>'+horaCorta(d.fin.hora)+'</b></div>';
+  s+='</div>';
+  s+='<div class="ping-ttl">Ubicaciones registradas ('+n+')</div>';
+  if(n){
+    s+='<div class="ping-list">';
+    d.trail.forEach(function(p,i){ s+='<div class="ping-item" onclick="irAPing(\''+u+'\','+i+')"><span class="pnum">'+(i+1)+'</span> '+horaCorta(p[2])+'</div>'; });
+    s+='</div>';
+  } else { s+='<div class="ping-vacio">Aún no hay señales de GPS hoy.</div>'; }
+  s+='</div>';
+  return s;
+}
+
 function iconPin(color){ return L.divIcon({className:'', html:'<div class="pin" style="background:'+color+'"></div>', iconSize:[16,16], iconAnchor:[8,16]}); }
+function iconHito(color, letra){ return L.divIcon({className:'', html:'<div class="pin-lg" style="background:'+color+'"><span>'+(letra||'')+'</span></div>', iconSize:[22,22], iconAnchor:[11,22]}); }
+function iconVenta(conVta){ return L.divIcon({className:'', html:'<div class="sale-badge'+(conVta?'':' novta')+'">'+(conVta?'$':'·')+'</div>', iconSize:[26,26], iconAnchor:[13,13]}); }
 function colorEst(est){ return est==='conv'?'#16A34A':est==='sola'?'#F59E0B':est==='fin'?'#64748B':'#CBD5E1'; }
 
 function pintarMapa(){
+  if(ANIMANDO) return;
   CAPA.clearLayers();
+  document.getElementById('legend').style.display = 'flex';
   var pts=[];
   SESION.equipo.forEach(function(u){
     var d=DATOS[u]; if(d.ultLat==null) return;
-    var mk=L.marker([d.ultLat,d.ultLng],{icon:iconPin(colorEst(d.estado))}).addTo(CAPA);
-    mk.bindPopup('<strong>'+nom(u)+'</strong><br>'+(d.ultHora?('Última señal: '+d.ultHora+'<br>'):'')+(d.ubicTxt?('📍 '+d.ubicTxt):''));
+    if(SELECCION && u===SELECCION){ pts.push([d.ultLat,d.ultLng]); return; }
+    var atenua = SELECCION ? 0.35 : 1;
+    var mk=L.marker([d.ultLat,d.ultLng],{icon:iconPin(colorEst(d.estado)), opacity:atenua}).addTo(CAPA);
+    mk.bindPopup('<strong>'+nom(u)+'</strong><br>'+(d.ultHora?('Última señal: '+horaCorta(d.ultHora)+'<br>'):'')+(d.ubicTxt?('📍 '+d.ubicTxt):''));
     mk.on('click',function(){ seleccionar(u); });
     pts.push([d.ultLat,d.ultLng]);
   });
-  if(SELECCION && DATOS[SELECCION] && DATOS[SELECCION].trail.length>0){
-    var trail=DATOS[SELECCION].trail;
+  if(SELECCION && DATOS[SELECCION]){
+    var dSel=DATOS[SELECCION];
+    var trail=dSel.trail||[];
     var tr=trail.map(function(p){return [p[0],p[1]];});
-    if(tr.length>1) L.polyline(tr,{color:'#0EA5F9',weight:2,opacity:.35}).addTo(CAPA);
+    var foco=[];
+    // 1) línea del recorrido clara (casing blanco + azul)
+    if(tr.length>1){
+      L.polyline(tr,{color:'#fff', weight:7, opacity:.9}).addTo(CAPA);
+      L.polyline(tr,{color:'#0EA5F9', weight:4, opacity:1}).addTo(CAPA);
+    }
+    // puntitos intermedios suaves
     trail.forEach(function(p,i){
-      var esUltimo=(i===trail.length-1);
-      L.circleMarker([p[0],p[1]],{radius:esUltimo?7:4.5,color:'#fff',weight:esUltimo?3:1.5,fillColor:esUltimo?'#16A34A':'#0EA5F9',fillOpacity:1}).addTo(CAPA)
-        .bindTooltip((p[2]?('Señal '+(i+1)+' · '+String(p[2]).slice(11,16)):('Señal '+(i+1))),{direction:'top'});
+      if(i===trail.length-1) return;
+      L.circleMarker([p[0],p[1]],{radius:3,color:'#0EA5F9',weight:1,fillColor:'#fff',fillOpacity:1}).addTo(CAPA)
+        .bindTooltip('Señal '+(i+1)+(p[2]?(' · '+horaCorta(p[2])):''),{direction:'top'});
+      foco.push([p[0],p[1]]);
     });
-    MAPA.fitBounds(L.latLngBounds(tr).pad(0.25));
+    // 2) INICIO (sola / con vendedor)
+    if(dSel.inicio && dSel.inicio.lat!=null){
+      var cv=dSel.inicio.conVend, col=cv?'#16A34A':'#F59E0B';
+      var txt=(cv?'Inició con vendedor':'Inició sola')+(dSel.inicio.hora?(' · '+horaCorta(dSel.inicio.hora)):'');
+      L.marker([dSel.inicio.lat,dSel.inicio.lng],{icon:iconHito(col,'I')}).addTo(CAPA)
+        .bindTooltip(txt,{permanent:true,direction:'right',className:'hito-lbl '+(cv?'conv':'sola'),offset:[10,-8]});
+      foco.push([dSel.inicio.lat,dSel.inicio.lng]);
+    }
+    // 3) pasó a con vendedor
+    if(dSel.cambioConVend && dSel.cambioConVend.lat!=null){
+      L.marker([dSel.cambioConVend.lat,dSel.cambioConVend.lng],{icon:iconHito('#16A34A','V')}).addTo(CAPA)
+        .bindTooltip('Pasó a con vendedor · '+horaCorta(dSel.cambioConVend.hora),{permanent:true,direction:'right',className:'hito-lbl conv',offset:[10,-8]});
+      foco.push([dSel.cambioConVend.lat,dSel.cambioConVend.lng]);
+    }
+    // 4) FIN
+    if(dSel.fin && dSel.fin.lat!=null){
+      L.marker([dSel.fin.lat,dSel.fin.lng],{icon:iconHito('#64748B','F')}).addTo(CAPA)
+        .bindTooltip('Cerró ruta · '+horaCorta(dSel.fin.hora),{permanent:true,direction:'right',className:'hito-lbl fin',offset:[10,-8]});
+      foco.push([dSel.fin.lat,dSel.fin.lng]);
+    }
+    // 5) ventas por PDV
+    dSel.ventasPDV.forEach(function(g){
+      if(g.lat==null) return;
+      var pop='<div class="vta-pop"><strong>🛒 '+g.pdv+'</strong><br>'+(g.hora?('Hora: '+horaCorta(g.hora)+'<br>'):'')+(g.dist?('Distribuidora: '+g.dist+'<br>'):'');
+      if(g.pedido){ pop+='Pedido: <b>Sí</b><br>Productos: <b>'+g.productos+'</b> · Unidades: <b>'+Math.round(g.unidades)+'</b><br><span class="tot">Total: S/ '+g.total.toFixed(2)+'</span>'; }
+      else { var caus=Object.keys(g.causales); pop+='Pedido: <b>No</b>'+(caus.length?('<br>Motivo: '+caus.join(', ')):''); }
+      pop+='</div>';
+      L.marker([g.lat,g.lng],{icon:iconVenta(g.pedido)}).addTo(CAPA).bindPopup(pop);
+      foco.push([g.lat,g.lng]);
+    });
+    // 6) ACTUAL
+    if(trail.length){
+      var last=trail[trail.length-1];
+      L.circleMarker([last[0],last[1]],{radius:9,color:'#fff',weight:3,fillColor:'#16A34A',fillOpacity:1}).addTo(CAPA)
+        .bindTooltip('Aquí ahora'+(last[2]?(' · '+horaCorta(last[2])):''),{permanent:true,direction:'top',className:'hito-lbl act',offset:[0,-6]});
+      foco.push([last[0],last[1]]);
+    } else if(dSel.ultLat!=null){
+      L.circleMarker([dSel.ultLat,dSel.ultLng],{radius:9,color:'#fff',weight:3,fillColor:colorEst(dSel.estado),fillOpacity:1}).addTo(CAPA)
+        .bindTooltip(nom(SELECCION)+(dSel.ultHora?(' · '+horaCorta(dSel.ultHora)):''),{permanent:true,direction:'top',className:'hito-lbl act',offset:[0,-6]});
+      foco.push([dSel.ultLat,dSel.ultLng]);
+    }
+    if(foco.length>1) MAPA.fitBounds(L.latLngBounds(foco).pad(0.25), {maxZoom:16});
+    else if(foco.length===1) MAPA.setView(foco[0], 15, {animate:true});
+    else if(pts.length) MAPA.fitBounds(L.latLngBounds(pts).pad(0.3));
   } else if(pts.length){ MAPA.fitBounds(L.latLngBounds(pts).pad(0.3)); }
 }
-function seleccionar(u){ SELECCION=(SELECCION===u)?null:u; render(); }
+function seleccionar(u){ if(ANIMANDO) detenerDesplazamiento(); SELECCION=(SELECCION===u)?null:u; render(); }
+
+function irAPing(u,i){
+  var d=DATOS[u]; if(!d||!d.trail[i]) return;
+  var p=d.trail[i];
+  MAPA.setView([p[0],p[1]], 17, {animate:true});
+  L.popup().setLatLng([p[0],p[1]]).setContent('<strong>Señal '+(i+1)+'</strong><br>'+horaCorta(p[2])).openOn(MAPA);
+}
+function iconMover(deg){
+  return L.divIcon({className:'', iconSize:[30,30], iconAnchor:[15,15],
+    html:'<div class="mover" style="transform:rotate('+deg+'deg)"><svg viewBox="0 0 24 24" width="30" height="30"><path d="M12 2 L20 20 L12 15 L4 20 Z" fill="#0EA5F9" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg></div>'});
+}
+function rumbo(a,b){ var lat=(a[0]+b[0])/2*Math.PI/180; var dLat=b[0]-a[0], dLng=(b[1]-a[1])*Math.cos(lat); return Math.atan2(dLng,dLat)*180/Math.PI; }
+
+function reproducirDesplazamiento(u){
+  var d=DATOS[u]; if(!d||d.trail.length<2) return;
+  detenerDesplazamiento();
+  SELECCION=u; ANIMANDO=true; ANIM_USER=u;
+  var full=d.trail.map(function(p){return [p[0],p[1]];});
+  CAPA.clearLayers();
+  document.getElementById('legend').style.display='flex';
+  L.polyline(full,{color:'#CBD5E1',weight:4,opacity:.8}).addTo(CAPA);
+  var colIni=(d.inicio&&d.inicio.conVend)?'#16A34A':'#F59E0B';
+  L.circleMarker(full[0],{radius:7,color:'#fff',weight:2,fillColor:colIni,fillOpacity:1}).addTo(CAPA)
+    .bindTooltip('Inicio · '+horaCorta(d.trail[0][2]),{permanent:true,direction:'left',className:'hito-lbl',offset:[-8,0]});
+  MAPA.fitBounds(L.latLngBounds(full).pad(0.25),{maxZoom:16});
+  var trazado=[full[0]];
+  var linea=L.polyline(trazado,{color:'#0EA5F9',weight:5,opacity:1}).addTo(CAPA);
+  ANIM_MK=L.marker(full[0],{icon:iconMover(0), zIndexOffset:1000}).addTo(CAPA);
+  ANIM_MK.bindTooltip(horaCorta(d.trail[0][2]),{permanent:true,direction:'top',className:'hito-lbl act',offset:[0,-12]});
+  render();
+  var i=1, n=full.length;
+  var paso=Math.max(120, Math.min(800, Math.round(20000/n)));
+  ANIM=setInterval(function(){
+    if(i>=n){ finDesplazamiento(u); return; }
+    var prev=full[i-1], cur=full[i];
+    trazado.push(cur); linea.setLatLngs(trazado);
+    ANIM_MK.setLatLng(cur); ANIM_MK.setIcon(iconMover(rumbo(prev,cur)));
+    ANIM_MK.setTooltipContent(horaCorta(d.trail[i][2]));
+    MAPA.panTo(cur,{animate:true,duration:.25});
+    i++;
+  }, paso);
+}
+function finDesplazamiento(u){ if(ANIM){clearInterval(ANIM);ANIM=null;} ANIMANDO=false; ANIM_USER=null; ANIM_MK=null; render(); }
+function detenerDesplazamiento(){ if(ANIM){clearInterval(ANIM);ANIM=null;} ANIMANDO=false; ANIM_USER=null; ANIM_MK=null; if(SELECCION) render(); }
 
 // Arranque
 (function(){
