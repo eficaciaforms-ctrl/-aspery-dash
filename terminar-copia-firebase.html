@@ -105,9 +105,22 @@ function setBar(ui, hechos, total, ok, fail){
   if(hechos>=total && total>0) bar.classList.add('done');
   document.getElementById('t-'+ui).textContent = ok+' copiados'+(fail?(' · '+fail+' con error'):'')+' / '+total;
 }
-async function escribir(coll, ui, rows, mapFn, idFn){
+// Cuenta cuántos documentos YA existen en una colección (para continuar donde se quedó)
+async function contarFB(coll){
+  var url = 'https://firestore.googleapis.com/v1/projects/'+FB_PROJECT+'/databases/(default)/documents:runAggregationQuery?key='+FB_KEY;
+  var body = { structuredAggregationQuery:{ structuredQuery:{ from:[{collectionId:coll}] }, aggregations:[{alias:'c', count:{}}] } };
+  try{
+    var r = await fetch(url,{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    var j = await r.json(); var n = 0;
+    (j||[]).forEach(function(x){ if(x.result && x.result.aggregateFields && x.result.aggregateFields.c) n = Number(x.result.aggregateFields.c.integerValue||0); });
+    return n;
+  }catch(e){ return 0; }
+}
+
+async function escribir(coll, ui, rowsOrd, start, total, mapFn, idFn){
   var ok=0, fail=0, firstErr='', quota=false;
-  setBar(ui, 0, rows.length, 0, 0);
+  var rows = rowsOrd.slice(start);
+  setBar(ui, start, total, start, 0);
   for(var i=0;i<rows.length && !quota;i+=PARALELO){
     var slice=rows.slice(i, i+PARALELO);
     var res = await Promise.all(slice.map(async function(r){
@@ -120,7 +133,7 @@ async function escribir(coll, ui, rows, mapFn, idFn){
       }catch(e){ return {ok:false, code:0, tx:String(e).slice(0,160)}; }
     }));
     res.forEach(function(x){ if(x.ok) ok++; else { fail++; if(!firstErr) firstErr='HTTP '+x.code+' · '+x.tx; if(/429|RESOURCE_EXHAUSTED|quota/i.test(x.tx)||x.code===429) quota=true; } });
-    setBar(ui, ok+fail, rows.length, ok, fail);
+    setBar(ui, start+ok+fail, total, start+ok, fail);
   }
   return { ok:ok, fail:fail, firstErr:firstErr, quota:quota };
 }
@@ -129,11 +142,18 @@ async function unaColeccion(coll, ui, accion, mapFn, idFn, base){
   log('→ Leyendo '+coll+' de Google Sheets…','inf');
   var r = await gasGet(Object.assign({accion:accion}, base));
   var filas = (r && r.status==='ok' && r.filas) ? r.filas : [];
-  log('   '+filas.length+' registros. Escribiendo a Firebase…','inf');
-  var res = await escribir(coll, ui, filas, mapFn, idFn);
-  if(res.quota){ log('   ⛔ Se agotó la cuota de Firebase en '+coll+' ('+res.ok+' copiados). Continúa mañana.','warn'); return false; }
-  if(res.fail){ log('   ⚠ '+coll+': '+res.ok+' ok, '+res.fail+' con error. Primer error: '+res.firstErr,'warn'); }
-  else log('   ✓ '+coll+' completo ('+res.ok+' documentos).','ok');
+  filas.sort(function(a,b){ return Number(a[0]) - Number(b[0]); });   // orden estable por ID
+  var total = filas.length;
+  log('   '+total+' registros en Sheets. Revisando lo ya copiado…','inf');
+  var existentes = await contarFB(coll);
+  var start = Math.max(0, existentes - 100);                          // retrocede 100 para no dejar huecos
+  if(start>=total){ setBar(ui, total, total, total, 0); log('   ✓ '+coll+' ya estaba completo ('+total+').','ok'); return true; }
+  log('   Ya hay ~'+existentes+' en Firebase. Continúo desde el '+start+'…','inf');
+  var res = await escribir(coll, ui, filas, start, total, mapFn, idFn);
+  var confirmados = start + res.ok;
+  if(res.quota){ log('   ⛔ Se agotó la cuota diaria de Firebase en '+coll+' (van ~'+confirmados+' de '+total+'). Continúa después del reinicio.','warn'); return false; }
+  if(res.fail){ log('   ⚠ '+coll+': '+res.ok+' nuevos, '+res.fail+' con error. Primer error: '+res.firstErr,'warn'); }
+  else log('   ✓ '+coll+' completo ('+confirmados+' de '+total+').','ok');
   return true;
 }
 
