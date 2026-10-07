@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Aspery · Terminar copia a Firebase</title>
+<style>
+:root{--navy:#051D3A;--blue:#0EA5F9;--green:#16A34A;--red:#DC2626;--amber:#F59E0B;--bg:#F1F5F9;--card:#fff;--line:#E2E8F0;--t1:#0F172A;--t2:#475569;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--navy);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;color:var(--t1)}
+.box{background:var(--card);border-radius:18px;max-width:620px;width:100%;padding:28px;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+h1{font-size:22px;font-weight:800;color:var(--navy);margin-bottom:4px}
+h1 b{color:var(--blue)}
+.sub{font-size:13px;color:var(--t2);margin-bottom:18px;line-height:1.6}
+button{background:var(--blue);color:#fff;border:none;border-radius:10px;padding:14px 20px;font-size:15px;font-weight:700;cursor:pointer;width:100%}
+button:disabled{opacity:.55;cursor:default}
+.prog{margin-top:16px}
+.prow{margin-bottom:12px}
+.prow .lbl{display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:5px}
+.bar{height:12px;background:#E2E8F0;border-radius:8px;overflow:hidden}
+.bar > i{display:block;height:100%;width:0;background:var(--blue);transition:width .2s}
+.bar.done > i{background:var(--green)}
+.log{margin-top:18px;background:#0B1220;border-radius:12px;padding:16px;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:#cbd5e1;max-height:220px;overflow-y:auto;white-space:pre-wrap;line-height:1.7}
+.ok{color:#4ade80}.err{color:#f87171}.inf{color:#38bdf8}.warn{color:#fbbf24}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>Asper<b>y</b> · Terminar copia a Firebase</h1>
+  <div class="sub">Lee los datos de tu Google Sheets y los escribe <b>directo a Firebase</b>, sin pasar por el puente de Google (así no topa su límite diario). Es seguro repetirlo: no duplica nada.</div>
+  <button id="btn" onclick="terminar()">▶ Terminar copia ahora</button>
+
+  <div class="prog" id="prog" style="display:none">
+    <div class="prow"><div class="lbl"><span>Marcaciones</span><span id="t-marca">—</span></div><div class="bar" id="b-marca"><i></i></div></div>
+    <div class="prow"><div class="lbl"><span>Ventas / pedidos</span><span id="t-ventas">—</span></div><div class="bar" id="b-ventas"><i></i></div></div>
+    <div class="prow"><div class="lbl"><span>Stock</span><span id="t-stock">—</span></div><div class="bar" id="b-stock"><i></i></div></div>
+  </div>
+
+  <div class="log" id="log">Listo para terminar la copia. Pulsa el botón.</div>
+</div>
+
+<script>
+/* ── Config ── */
+var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzC_ANIW871GP6G3uUWowoaSHo-4cIAhObFL7xp8m_ZJjdqs2P9KWYxZIcGAX9oy8cl/exec';
+var APP_TOKEN  = 'ASP-dcdc1d72bd13356a6f1d0e58eda80435';
+var FB_PROJECT = 'aspery-8780d';
+var FB_KEY     = 'AIzaSyCabjIjVRCXb_BlNTXi_QHQw9yNhBV6IIE';
+var FB_DOCS    = 'https://firestore.googleapis.com/v1/projects/' + FB_PROJECT + '/databases/(default)/documents';
+var TODAS = ['PROMLIM1','PROMLIM3','PROMLIM5','PROMLIM6','PROMAQP','PROMCUS','PROMTAC','PROMHYO','PROMTPP','PROMCIX','PROMTRUX','PROMICA','PROMPIU'];
+var PARALELO = 40;   // cuántos documentos escribe a la vez
+
+/* ── Log ── */
+var logEl = document.getElementById('log');
+function log(m,c){ logEl.innerHTML += '\n' + (c?('<span class="'+c+'">'+m+'</span>'):m); logEl.scrollTop = logEl.scrollHeight; }
+
+/* ── Constructores de valores Firestore (idénticos al puente) ── */
+function fbStr(v){ return { stringValue: String(v==null?'':v) }; }
+function fbNum(v){ var n=parseFloat(v); return isNaN(n) ? {nullValue:null} : {doubleValue:n}; }
+function fbTs(id){ var n=Number(id); return (isNaN(n)||n<=0) ? {nullValue:null} : {timestampValue:new Date(n).toISOString()}; }
+function normFecha(v){ var s=String(v||''); return (s.indexOf('T')>=0) ? s.slice(0,10) : s; }
+// Hora: si viene en UTC (…T##:##:##Z, como la serializa Sheets) la pasa a hora de Perú (−5h); si ya es local, tal cual
+function fbHora(v){
+  var s=String(v==null?'':v);
+  if(s.indexOf('T')>=0){
+    var t=s.slice(11,19), p=t.split(':');
+    if(p.length>=2){
+      var sec=(((Number(p[0])||0)*3600+(Number(p[1])||0)*60+(Number(p[2])||0))-18000+86400)%86400;
+      var hh=Math.floor(sec/3600), mm=Math.floor((sec%3600)/60), ss=sec%60;
+      return { stringValue:(hh<10?'0':'')+hh+':'+(mm<10?'0':'')+mm+':'+(ss<10?'0':'')+ss };
+    }
+  }
+  return { stringValue:s };
+}
+
+/* ── Mapeos (idénticos a los del puente) ── */
+function mapMarca(r){ return {
+  id:fbStr(r[0]), orden:fbNum(r[0]), fecha:fbStr(normFecha(r[1])), hora:fbHora(r[2]),
+  usuario:fbStr(String(r[6]).trim()), tipo:fbStr(r[7]), dist:fbStr(r[8]), vendedor:fbStr(r[9]),
+  lat:fbNum(r[10]), lng:fbNum(r[11]), ubic:fbStr(r[12]), bateria:fbStr(r[13]), fotoURL:fbStr(r[14]), ts:fbTs(r[0]) }; }
+function mapVenta(r){ return {
+  id:fbStr(r[0]), orden:fbNum(r[0]), fecha:fbStr(normFecha(r[2])), hora:fbHora(r[3]), usuario:fbStr(String(r[4]).trim()),
+  dist:fbStr(r[5]), pdv:fbStr(r[8]), pedido:fbStr(r[16]), ean:fbStr(r[17]), prod:fbStr(r[18]),
+  marca:fbStr(r[19]), cantidad:fbNum(r[20]), total:fbNum(r[24]), causal:fbStr(r[25]), causalDet:fbStr(r[26]), ts:fbTs(r[0]) }; }
+function mapStock(r){ return {
+  id:fbStr(r[0]), orden:fbNum(r[0]), fecha:fbStr(normFecha(r[1])), hora:fbHora(r[2]), usuario:fbStr(String(r[3]).trim()),
+  dist:fbStr(r[4]), ean:fbStr(r[5]), prod:fbStr(r[6]), marca:fbStr(r[7]), cat:fbStr(r[8]), top:fbStr(r[9]), unidades:fbNum(r[10]), ts:fbTs(r[0]) }; }
+
+function docIdMarca(r){ return String(r[0]); }
+function docIdVenta(r){ return String(r[0]) + '_' + String(r[17]||'x'); }
+function docIdStock(r){ return String(r[0]) + '_' + String(r[5]||'x'); }
+
+/* ── Lectura del Sheets (NO gasta el cupo de Google, solo lee) ── */
+function hoyISO(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function gasGet(params){
+  params.tk = APP_TOKEN;
+  var qs = Object.keys(params).map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(params[k]);}).join('&');
+  return fetch(SCRIPT_URL+'?'+qs).then(function(r){ return r.json(); });
+}
+
+/* ── Escritura directa a Firestore, en tandas paralelas ── */
+function setBar(ui, hechos, total, ok, fail){
+  var pct = total? Math.round(hechos/total*100) : 100;
+  var bar = document.getElementById('b-'+ui);
+  bar.querySelector('i').style.width = pct+'%';
+  if(hechos>=total && total>0) bar.classList.add('done');
+  document.getElementById('t-'+ui).textContent = ok+' copiados'+(fail?(' · '+fail+' con error'):'')+' / '+total;
+}
+async function escribir(coll, ui, rows, mapFn, idFn){
+  var ok=0, fail=0, firstErr='', quota=false;
+  setBar(ui, 0, rows.length, 0, 0);
+  for(var i=0;i<rows.length && !quota;i+=PARALELO){
+    var slice=rows.slice(i, i+PARALELO);
+    var res = await Promise.all(slice.map(async function(r){
+      var url = FB_DOCS+'/'+coll+'/'+encodeURIComponent(idFn(r))+'?key='+FB_KEY;
+      try{
+        var rr = await fetch(url,{method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({fields:mapFn(r)})});
+        if(rr.status===200) return {ok:true};
+        var tx = await rr.text();
+        return {ok:false, code:rr.status, tx:(tx||'').slice(0,160)};
+      }catch(e){ return {ok:false, code:0, tx:String(e).slice(0,160)}; }
+    }));
+    res.forEach(function(x){ if(x.ok) ok++; else { fail++; if(!firstErr) firstErr='HTTP '+x.code+' · '+x.tx; if(/429|RESOURCE_EXHAUSTED|quota/i.test(x.tx)||x.code===429) quota=true; } });
+    setBar(ui, ok+fail, rows.length, ok, fail);
+  }
+  return { ok:ok, fail:fail, firstErr:firstErr, quota:quota };
+}
+
+async function unaColeccion(coll, ui, accion, mapFn, idFn, base){
+  log('→ Leyendo '+coll+' de Google Sheets…','inf');
+  var r = await gasGet(Object.assign({accion:accion}, base));
+  var filas = (r && r.status==='ok' && r.filas) ? r.filas : [];
+  log('   '+filas.length+' registros. Escribiendo a Firebase…','inf');
+  var res = await escribir(coll, ui, filas, mapFn, idFn);
+  if(res.quota){ log('   ⛔ Se agotó la cuota de Firebase en '+coll+' ('+res.ok+' copiados). Continúa mañana.','warn'); return false; }
+  if(res.fail){ log('   ⚠ '+coll+': '+res.ok+' ok, '+res.fail+' con error. Primer error: '+res.firstErr,'warn'); }
+  else log('   ✓ '+coll+' completo ('+res.ok+' documentos).','ok');
+  return true;
+}
+
+async function terminar(){
+  var btn=document.getElementById('btn'); btn.disabled=true; btn.textContent='Copiando…';
+  document.getElementById('prog').style.display='block';
+  logEl.innerHTML='';
+  log('Iniciando copia directa a Firebase…','inf');
+  var base = { promotoras:TODAS.join(','), desde:'2026-01-01', hasta:hoyISO() };
+  try{
+    var seguir = await unaColeccion('marcaciones', 'marca', 'listar_marcaciones', mapMarca, docIdMarca, base);
+    if(seguir) seguir = await unaColeccion('ventas', 'ventas', 'listar_equipo', mapVenta, docIdVenta, base);
+    if(seguir) seguir = await unaColeccion('stock', 'stock', 'listar_stock', mapStock, docIdStock, base);
+    if(seguir){ log('\n✅ LISTO. Firebase ya tiene toda la información del dashboard.','ok'); }
+    else { log('\nParcial: vuelve a pulsar el botón más tarde para completar lo que faltó.','warn'); }
+  }catch(e){ log('\n❌ Error inesperado: '+String(e),'err'); }
+  btn.disabled=false; btn.textContent='▶ Terminar copia ahora';
+}
+</script>
+</body>
+</html>
