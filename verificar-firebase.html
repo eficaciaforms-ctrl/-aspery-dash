@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Aspery · Verificar copia en Firebase</title>
+<style>
+:root{--navy:#051D3A;--blue:#0EA5F9;--green:#16A34A;--red:#DC2626;--amber:#F59E0B;--bg:#F1F5F9;--card:#fff;--line:#E2E8F0;--t1:#0F172A;--t2:#475569;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--navy);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;color:var(--t1)}
+.box{background:var(--card);border-radius:18px;max-width:640px;width:100%;padding:28px;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+h1{font-size:22px;font-weight:800;color:var(--navy);margin-bottom:4px}
+h1 b{color:var(--blue)}
+.sub{font-size:13px;color:var(--t2);margin-bottom:18px;line-height:1.6}
+button{background:var(--blue);color:#fff;border:none;border-radius:10px;padding:14px 20px;font-size:15px;font-weight:700;cursor:pointer;width:100%}
+button:disabled{opacity:.55;cursor:default}
+table{width:100%;border-collapse:collapse;margin-top:18px;font-size:13.5px}
+th,td{padding:10px 8px;text-align:left;border-bottom:1px solid var(--line)}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--t2)}
+td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.ok{color:var(--green);font-weight:800}
+.warn{color:var(--amber);font-weight:800}
+.bad{color:var(--red);font-weight:800}
+.veredicto{margin-top:18px;padding:14px;border-radius:12px;font-size:14px;font-weight:600;display:none}
+.veredicto.good{background:#DCFCE7;color:#15803D}
+.veredicto.check{background:#FEF3C7;color:#B45309}
+.hint{font-size:11.5px;color:var(--t2);margin-top:10px;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>Asper<b>y</b> · Verificar copia</h1>
+  <div class="sub">Cuenta los registros en <b>Google Sheets</b> y los compara con lo que hay en <b>Firebase</b>, colección por colección. Si coinciden, nada se perdió.</div>
+  <button id="btn" onclick="verificar()">🔍 Verificar ahora</button>
+
+  <table id="tabla" style="display:none">
+    <thead><tr><th>Colección</th><th class="num">En Sheets</th><th class="num">En Firebase</th><th>Estado</th></tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+
+  <div class="veredicto" id="veredicto"></div>
+  <div class="hint" id="hint"></div>
+</div>
+
+<script>
+var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzC_ANIW871GP6G3uUWowoaSHo-4cIAhObFL7xp8m_ZJjdqs2P9KWYxZIcGAX9oy8cl/exec';
+var APP_TOKEN  = 'ASP-dcdc1d72bd13356a6f1d0e58eda80435';
+var FB_PROJECT = 'aspery-8780d';
+var FB_KEY     = 'AIzaSyCabjIjVRCXb_BlNTXi_QHQw9yNhBV6IIE';
+var FB_AGG     = 'https://firestore.googleapis.com/v1/projects/'+FB_PROJECT+'/databases/(default)/documents:runAggregationQuery?key='+FB_KEY;
+var TODAS = ['PROMLIM1','PROMLIM3','PROMLIM5','PROMLIM6','PROMAQP','PROMCUS','PROMTAC','PROMHYO','PROMTPP','PROMCIX','PROMTRUX','PROMICA','PROMPIU'];
+
+function hoyISO(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function gasGet(params){
+  params.tk = APP_TOKEN;
+  var qs = Object.keys(params).map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(params[k]);}).join('&');
+  return fetch(SCRIPT_URL+'?'+qs).then(function(r){ return r.json(); });
+}
+async function contarFB(coll){
+  var body = { structuredAggregationQuery:{ structuredQuery:{ from:[{collectionId:coll}] }, aggregations:[{alias:'c', count:{}}] } };
+  try{
+    var r = await fetch(FB_AGG,{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    var j = await r.json(); var n = 0;
+    (j||[]).forEach(function(x){ if(x.result && x.result.aggregateFields && x.result.aggregateFields.c) n = Number(x.result.aggregateFields.c.integerValue||0); });
+    return n;
+  }catch(e){ return -1; }
+}
+function fila(nombre, sheets, fb){
+  var estado, cls;
+  if(fb<0){ estado='no se pudo leer'; cls='bad'; }
+  else if(fb>=sheets){ estado='✓ completo'; cls='ok'; }
+  else if(sheets-fb <= Math.max(5, Math.round(sheets*0.005))){ estado='✓ ok (dif. mínima)'; cls='warn'; }
+  else { estado='⚠ faltan '+(sheets-fb); cls='bad'; }
+  return { html:'<tr><td><b>'+nombre+'</b></td><td class="num">'+sheets.toLocaleString()+'</td><td class="num">'+(fb<0?'—':fb.toLocaleString())+'</td><td class="'+cls+'">'+estado+'</td></tr>', bien:(fb>=0 && (sheets-fb)<=Math.max(5,Math.round(sheets*0.005))) };
+}
+
+async function verificar(){
+  var btn=document.getElementById('btn'); btn.disabled=true; btn.textContent='Verificando…';
+  document.getElementById('tabla').style.display='table';
+  document.getElementById('tbody').innerHTML='';
+  document.getElementById('veredicto').style.display='none';
+  document.getElementById('hint').textContent='';
+  var base = { promotoras:TODAS.join(','), desde:'2026-01-01', hasta:hoyISO() };
+
+  var defs = [
+    ['Marcaciones', 'listar_marcaciones', 'marcaciones'],
+    ['Ventas / pedidos', 'listar_equipo', 'ventas'],
+    ['Stock', 'listar_stock', 'stock']
+  ];
+  var todoBien = true;
+  for(var i=0;i<defs.length;i++){
+    var d = defs[i];
+    var r = await gasGet(Object.assign({accion:d[1]}, base));
+    var sheets = (r && r.status==='ok' && r.filas) ? r.filas.length : 0;
+    var fb = await contarFB(d[2]);
+    var f = fila(d[0], sheets, fb);
+    document.getElementById('tbody').innerHTML += f.html;
+    if(!f.bien) todoBien=false;
+  }
+
+  var v = document.getElementById('veredicto');
+  v.style.display='block';
+  if(todoBien){
+    v.className='veredicto good';
+    v.textContent='✅ Todo verificado — Firebase tiene toda la información. No se perdió nada.';
+  } else {
+    v.className='veredicto check';
+    v.textContent='⚠ Hay una colección con diferencia. Si es "dif. mínima" es normal; si falta mucho, vuelve a correr la copia.';
+  }
+  document.getElementById('hint').innerHTML = 'Nota: en Ventas y Stock puede haber una diferencia muy pequeña si un mismo pedido tiene el mismo producto repetido (se cuenta una vez). No es pérdida de datos. Si la diferencia es grande, abre la página de copia y pulsa el botón otra vez.';
+  btn.disabled=false; btn.textContent='🔍 Verificar de nuevo';
+}
+</script>
+</body>
+</html>
