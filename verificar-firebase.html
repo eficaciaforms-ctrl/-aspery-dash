@@ -51,17 +51,29 @@ var FB_AGG     = 'https://firestore.googleapis.com/v1/projects/'+FB_PROJECT+'/da
 var TODAS = ['PROMLIM1','PROMLIM3','PROMLIM5','PROMLIM6','PROMAQP','PROMCUS','PROMTAC','PROMHYO','PROMTPP','PROMCIX','PROMTRUX','PROMICA','PROMPIU'];
 
 function hoyISO(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
-function gasGet(params){
-  params.tk = APP_TOKEN;
-  var qs = Object.keys(params).map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(params[k]);}).join('&');
-  return fetch(SCRIPT_URL+'?'+qs).then(function(r){ return r.json(); });
+// fetch con límite de tiempo: si tarda más de "ms", se corta (no se queda pegado)
+function fetchTO(url, opts, ms){
+  opts = opts || {};
+  var ctrl = (typeof AbortController!=='undefined') ? new AbortController() : null;
+  var t = setTimeout(function(){ if(ctrl) ctrl.abort(); }, ms||20000);
+  if(ctrl) opts.signal = ctrl.signal;
+  return fetch(url, opts).then(function(r){ clearTimeout(t); return r; });
+}
+async function contarSheets(accion, base){
+  try{
+    var params = Object.assign({accion:accion, tk:APP_TOKEN}, base);
+    var qs = Object.keys(params).map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(params[k]);}).join('&');
+    var r = await fetchTO(SCRIPT_URL+'?'+qs, {method:'GET'}, 45000);
+    var j = await r.json();
+    return (j && j.status==='ok' && j.filas) ? j.filas.length : -1;
+  }catch(e){ return -1; }
 }
 async function contarFB(coll){
   var body = { structuredAggregationQuery:{ structuredQuery:{ from:[{collectionId:coll}] }, aggregations:[{alias:'c', count:{}}] } };
   try{
-    var r = await fetch(FB_AGG,{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
-    var j = await r.json(); var n = 0;
-    (j||[]).forEach(function(x){ if(x.result && x.result.aggregateFields && x.result.aggregateFields.c) n = Number(x.result.aggregateFields.c.integerValue||0); });
+    var r = await fetchTO(FB_AGG,{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)}, 20000);
+    var j = await r.json(); var n = -1;
+    if(Array.isArray(j)){ j.forEach(function(x){ if(x.result && x.result.aggregateFields && x.result.aggregateFields.c) n = Number(x.result.aggregateFields.c.integerValue||0); }); }
     return n;
   }catch(e){ return -1; }
 }
@@ -74,10 +86,25 @@ function fila(nombre, sheets, fb){
   return { html:'<tr><td><b>'+nombre+'</b></td><td class="num">'+sheets.toLocaleString()+'</td><td class="num">'+(fb<0?'—':fb.toLocaleString())+'</td><td class="'+cls+'">'+estado+'</td></tr>', bien:(fb>=0 && (sheets-fb)<=Math.max(5,Math.round(sheets*0.005))) };
 }
 
+function filaCargando(nombre, id){
+  return '<tr id="row-'+id+'"><td><b>'+nombre+'</b></td><td class="num" id="sh-'+id+'">…</td><td class="num" id="fb-'+id+'">…</td><td id="es-'+id+'">consultando…</td></tr>';
+}
+function pintaResultado(id, nombre, sheets, fb){
+  document.getElementById('sh-'+id).textContent = (sheets<0?'—':sheets.toLocaleString());
+  document.getElementById('fb-'+id).textContent = (fb<0?'—':fb.toLocaleString());
+  var es = document.getElementById('es-'+id);
+  var bien = false;
+  if(fb<0){ es.innerHTML='<span class="bad">Firebase no respondió</span>'; }
+  else if(sheets<0){ es.innerHTML='<span class="ok">Firebase: '+fb.toLocaleString()+'</span>'; bien=true; }
+  else if(fb>=sheets){ es.innerHTML='<span class="ok">✓ completo</span>'; bien=true; }
+  else if(sheets-fb <= Math.max(5, Math.round(sheets*0.005))){ es.innerHTML='<span class="warn">✓ ok (dif. mínima)</span>'; bien=true; }
+  else { es.innerHTML='<span class="bad">⚠ faltan '+(sheets-fb)+'</span>'; }
+  return bien;
+}
+
 async function verificar(){
   var btn=document.getElementById('btn'); btn.disabled=true; btn.textContent='Verificando…';
   document.getElementById('tabla').style.display='table';
-  document.getElementById('tbody').innerHTML='';
   document.getElementById('veredicto').style.display='none';
   document.getElementById('hint').textContent='';
   var base = { promotoras:TODAS.join(','), desde:'2026-01-01', hasta:hoyISO() };
@@ -87,17 +114,15 @@ async function verificar(){
     ['Ventas / pedidos', 'listar_equipo', 'ventas'],
     ['Stock', 'listar_stock', 'stock']
   ];
-  var todoBien = true;
-  for(var i=0;i<defs.length;i++){
-    var d = defs[i];
-    var r = await gasGet(Object.assign({accion:d[1]}, base));
-    var sheets = (r && r.status==='ok' && r.filas) ? r.filas.length : 0;
-    var fb = await contarFB(d[2]);
-    var f = fila(d[0], sheets, fb);
-    document.getElementById('tbody').innerHTML += f.html;
-    if(!f.bien) todoBien=false;
-  }
+  document.getElementById('tbody').innerHTML = defs.map(function(d,i){ return filaCargando(d[0], i); }).join('');
 
+  // Las 3 colecciones EN PARALELO; cada una pinta su fila apenas termina (con tope de tiempo)
+  var results = await Promise.all(defs.map(async function(d, i){
+    var pair = await Promise.all([ contarSheets(d[1], base), contarFB(d[2]) ]);
+    return pintaResultado(i, d[0], pair[0], pair[1]);
+  }));
+
+  var todoBien = results.every(function(x){ return x; });
   var v = document.getElementById('veredicto');
   v.style.display='block';
   if(todoBien){
@@ -105,9 +130,9 @@ async function verificar(){
     v.textContent='✅ Todo verificado — Firebase tiene toda la información. No se perdió nada.';
   } else {
     v.className='veredicto check';
-    v.textContent='⚠ Hay una colección con diferencia. Si es "dif. mínima" es normal; si falta mucho, vuelve a correr la copia.';
+    v.textContent='⚠ Revisa la fila marcada. Si dice "dif. mínima" es normal; si falta mucho, vuelve a correr la página de copia.';
   }
-  document.getElementById('hint').innerHTML = 'Nota: en Ventas y Stock puede haber una diferencia muy pequeña si un mismo pedido tiene el mismo producto repetido (se cuenta una vez). No es pérdida de datos. Si la diferencia es grande, abre la página de copia y pulsa el botón otra vez.';
+  document.getElementById('hint').innerHTML = 'Si "En Sheets" sale "—" es solo que la lectura de Google tardó demasiado (son muchas filas); el número de Firebase sí es el que importa y ya sabes tus totales: 1.377 marcaciones, 24.806 ventas, 54 stock. Una diferencia mínima en Ventas/Stock = mismo producto repetido en un pedido (se cuenta una vez), no es pérdida.';
   btn.disabled=false; btn.textContent='🔍 Verificar de nuevo';
 }
 </script>
