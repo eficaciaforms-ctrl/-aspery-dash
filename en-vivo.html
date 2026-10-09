@@ -232,7 +232,7 @@ function gasGet(params,cb){
   params=params||{}; params.tk=APP_TOKEN;
   var qs=Object.keys(params).map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(params[k]);}).join('&');
   var ctrl=(typeof AbortController!=='undefined')?new AbortController():null;
-  var tm=setTimeout(function(){if(ctrl)ctrl.abort();},18000);
+  var tm=setTimeout(function(){if(ctrl)ctrl.abort();},60000);  // la hoja de Ubicaciones es grande → damos más tiempo
   fetch(SCRIPT_URL+'?'+qs,{signal:ctrl?ctrl.signal:undefined}).then(function(r){clearTimeout(tm);return r.json();}).then(cb).catch(function(){clearTimeout(tm);cb(null);});
 }
 function recHora(h){ h=String(h||''); var iso=h.match(/T(\d{2}):(\d{2}):(\d{2})/); if(iso){var hh=(parseInt(iso[1],10)+24-5)%24;return ('0'+hh).slice(-2)+':'+iso[2];} var m=h.match(/(\d{1,2}:\d{2})/); return m?m[1]:''; }
@@ -268,6 +268,7 @@ function verRecorrido(u){
   var d=_datos[u]; if(d){ try{_map.setView([d.lat,d.lng],15,{animate:true});}catch(e){} }
   gasGet({accion:'listar_ubicaciones',promotoras:u,fecha:hoyISO()},function(r){
     if(_recUser!==u) return;
+    if(r===null){ document.getElementById('rec-info').textContent='No se pudo cargar (muchos datos). Toca de nuevo.'; return; }
     var filas=(r&&r.status==='ok'&&r.filas)?r.filas:[];
     var trail=filas.map(function(f){return [recFix(f[4],90),recFix(f[5],180),recHora(f[2])];})
       .filter(function(p){return !isNaN(p[0])&&!isNaN(p[1])&&p[0]<1&&p[0]>-19.5&&p[1]<-68&&p[1]>-82;});
