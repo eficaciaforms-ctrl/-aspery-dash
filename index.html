@@ -252,6 +252,9 @@ button{font-family:inherit;}
 .mk-row b{color:var(--text);font-weight:700}
 .mk-btn{display:block;width:100%;margin-top:11px;border:none;border-radius:9px;padding:9px;background:var(--blue);color:#fff;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit}
 .mk-btn:hover{background:#0284C7}
+.mk-anul{border:none;border-radius:6px;padding:2px 8px;background:#FEE2E2;color:#B91C1C;font-weight:700;font-size:10.5px;cursor:pointer;font-family:inherit;margin-left:6px}
+.mk-anul:hover{background:#FCA5A5;color:#7F1D1D}
+.tbl .anul-td{white-space:nowrap}
 .mk-card{transition:transform .12s ease, box-shadow .12s ease}
 .mk-card.ok{cursor:pointer}
 .mk-card.ok:hover{transform:translateY(-2px);box-shadow:0 10px 22px rgba(2,6,23,.10)}
@@ -1912,6 +1915,32 @@ function irStatusDayDe(user){
   setTab('statusday');
   sdCargar();
 }
+// Botón "Anular" (solo jefe/supervisor); m = objeto de marcación con .id/.usuario/.tipo
+function btnAnular(m, etq){
+  if(!m || !m.id) return '';
+  if(!(SESION.role==='jefe' || SESION.role==='sup')) return '';
+  return '<button class="mk-anul" onclick="event.stopPropagation();anularMarca(\''+m.id+'\',\''+m.usuario+'\',\''+m.tipo+'\',\''+etq+'\')">Anular</button>';
+}
+var _ANULANDO=false;
+function anularMarca(id, usuario, tipo, etq){
+  if(_ANULANDO) return;
+  if(!confirm('¿Anular la marcación de "'+etq+'" de '+usuario+'?\n\nSe quitará de los reportes y quedará registrado que tú la anulaste. '+usuario+' deberá volver a marcar.')) return;
+  _ANULANDO=true;
+  gasPostReal({ accion:'ANULAR_MARCACION', id:id, usuario:usuario, tipo_marca:tipo,
+    anulado_por:SESION.user, rol:SESION.role, motivo:'Anulada desde el panel por '+SESION.user },
+  function(res){
+    _ANULANDO=false;
+    if(res && res.status==='ok'){
+      try{ _gasCache={}; }catch(e){}
+      alert('✓ Marcación anulada.\n\n'+usuario+' deberá volver a marcar su '+etq+'.');
+      _marcaKey='';
+      var proms = SESION.role==='jefe' ? TODOS_PROMS.slice() : (SUP_MAP[SESION.user]||[]);
+      cargarMarcaciones(diasArrayRango(), proms.join(','));
+    } else {
+      alert('No se pudo anular: '+((res&&res.msg)||'intenta de nuevo'));
+    }
+  });
+}
 function renderMarcaciones(){
   var data=marcaFiltrado().slice();
   var cont=document.getElementById('content');
@@ -1984,9 +2013,9 @@ function renderMarcaciones(){
       html+='<div class="mk-head"><div class="mk-av" style="background:'+colUsr(u)+'">'+inic(u)+'</div><div><div class="mk-nm" style="padding-left:0">'+u+'</div>'+(sup?'<div class="mk-sup" style="padding-left:0">'+sup+'</div>':'')+'</div></div>';
       html+='<div class="mk-st">'+(fin?'✓ Jornada cerrada':(horaConv?'<span class="mk-live"></span> Con vendedor · '+enRuta:'<span class="mk-live" style="background:#D97706"></span> Solo(a) · '+enRuta))+'</div>';
       html+='<div class="mk-rows">';
-      html+='<div class="mk-row"><span>🟢 Ingreso</span><b>'+(ini.horaSrv||'—')+'</b></div>';
-      html+='<div class="mk-row"><span>👥 Con vendedor</span><b>'+(horaConv?(horaConv+(iniConVend?' <span style="color:#94A3B8;font-weight:400">(al inicio)</span>':'')):'<span style="color:#D97706">pendiente</span>')+'</b></div>';
-      html+='<div class="mk-row"><span>🏁 Salida</span><b>'+(fin?(fin.horaSrv||'—'):'—')+'</b></div>';
+      html+='<div class="mk-row"><span>🟢 Ingreso</span><b>'+(ini.horaSrv||'—')+btnAnular(ini,'inicio de ruta')+'</b></div>';
+      html+='<div class="mk-row"><span>👥 Con vendedor</span><b>'+(horaConv?(horaConv+(iniConVend?' <span style="color:#94A3B8;font-weight:400">(al inicio)</span>':'')):'<span style="color:#D97706">pendiente</span>')+(conv?btnAnular(conv,'inicio con vendedor'):'')+'</b></div>';
+      html+='<div class="mk-row"><span>🏁 Salida</span><b>'+(fin?(fin.horaSrv||'—'):'—')+(fin?btnAnular(fin,'fin de ruta'):'')+'</b></div>';
       html+='<div class="mk-row" style="border-top:1px solid var(--border);margin-top:4px;padding-top:6px"><span>⏱ Total c/vendedor</span><b style="color:var(--blue)">'+(totalConVend||'—')+'</b></div>';
       html+='</div>';
       html+='<button class="mk-btn" onclick="event.stopPropagation();irStatusDayDe(\''+u+'\')">🗺️ Ver recorrido</button>';
@@ -2004,13 +2033,16 @@ function renderMarcaciones(){
   if(data.length){
     data.sort(function(a,b){ if(a.fecha!==b.fecha) return a.fecha<b.fecha?1:-1; return a.horaSrv<b.horaSrv?1:-1; });
     html+='<div class="sec"><div class="sec-hdr"><div class="sec-ttl"><div class="sec-ttl-ico">📋</div>Detalle de marcaciones</div></div>';
-    html+='<table class="tbl"><thead><tr><th>Usuario</th><th>Tipo</th><th>Fecha</th><th>Hora</th><th>Distribuidora</th><th>Vendedor</th><th>Ubicación</th><th class="r">Batería</th><th class="r">Hora equipo</th><th>Foto</th></tr></thead><tbody>';
+    var puedeAnular = (SESION.role==='jefe'||SESION.role==='sup');
+    html+='<table class="tbl"><thead><tr><th>Usuario</th><th>Tipo</th><th>Fecha</th><th>Hora</th><th>Distribuidora</th><th>Vendedor</th><th>Ubicación</th><th class="r">Batería</th><th class="r">Hora equipo</th><th>Foto</th>'+(puedeAnular?'<th>Acción</th>':'')+'</tr></thead><tbody>';
     data.forEach(function(r){
-      var tipoB=r.tipo==='FIN'?'<span class="bdg bdg-a">FIN</span>':'<span class="bdg bdg-g">INICIO</span>';
+      var tb = r.tipo==='FIN' ? '<span class="bdg bdg-a">FIN</span>' : (r.tipo==='CONVEND' ? '<span class="bdg bdg-g">CON VEND.</span>' : '<span class="bdg bdg-g">INICIO</span>');
       var mapa=(r.lat&&r.lng)?'<a href="https://maps.google.com/?q='+r.lat+','+r.lng+'" target="_blank" style="color:var(--blue)">'+(r.ubic||(r.lat+', '+r.lng))+'</a>':'—';
       var foto=(r.foto && r.foto.indexOf('http')===0)?'<a href="'+r.foto+'" target="_blank" style="color:var(--blue)">Ver 📷</a>':'—';
       var alt=r.alterada?'<span class="bdg bdg-r">⚠ '+Math.abs(r.delta)+'s</span>':'<span class="bdg bdg-g">✓</span>';
-      html+='<tr><td><strong>'+r.usuario+'</strong></td><td>'+tipoB+'</td><td>'+fmtFecha(r.fecha)+'</td><td>'+(r.horaSrv||'—')+'</td><td>'+r.dist+'</td><td>'+r.vendedor+'</td><td>'+mapa+'</td><td class="r num">'+(r.bateria||'—')+'</td><td class="r">'+alt+'</td><td>'+foto+'</td></tr>';
+      var etq = r.tipo==='FIN' ? 'fin de ruta' : (r.tipo==='CONVEND' ? 'inicio con vendedor' : 'inicio de ruta');
+      var tdAnul = puedeAnular ? ('<td class="anul-td"><button class="mk-anul" onclick="anularMarca(\''+r.id+'\',\''+r.usuario+'\',\''+r.tipo+'\',\''+etq+'\')">Anular</button></td>') : '';
+      html+='<tr><td><strong>'+r.usuario+'</strong></td><td>'+tb+'</td><td>'+fmtFecha(r.fecha)+'</td><td>'+(r.horaSrv||'—')+'</td><td>'+r.dist+'</td><td>'+r.vendedor+'</td><td>'+mapa+'</td><td class="r num">'+(r.bateria||'—')+'</td><td class="r">'+alt+'</td><td>'+foto+'</td>'+tdAnul+'</tr>';
     });
     html+='</tbody></table></div>';
   }
