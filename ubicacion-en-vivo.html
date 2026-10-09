@@ -265,6 +265,40 @@ var DATOS = {};        // por promotora: {estado, ultHora, ultLat, ultLng, ubicT
 var SELECCION = null;
 var ANIM=null, ANIMANDO=false, ANIM_USER=null, ANIM_MK=null;   // reproducción de desplazamiento
 var timerRefresh = null;
+
+// ── AJUSTE A CALLES (map-matching con OSRM, gratis) ──────────
+// Convierte los puntos del recorrido en una línea que sigue las calles reales,
+// como la ruta de Google Maps. Si falla, usa la línea recta (nunca se rompe).
+var _snapCache = {};
+function snapSig(u, trail){
+  var a=trail[0]||[0,0], b=trail[trail.length-1]||[0,0];
+  return u+'|'+trail.length+'|'+(a[0]||0).toFixed(4)+','+(a[1]||0).toFixed(4)+'|'+(b[0]||0).toFixed(4)+','+(b[1]||0).toFixed(4);
+}
+function _downsample(arr, max){
+  if(arr.length<=max) return arr.slice();
+  var out=[], step=(arr.length-1)/(max-1);
+  for(var i=0;i<max;i++) out.push(arr[Math.round(i*step)]);
+  return out;
+}
+function snapToRoads(latlngs, cb){
+  try{
+    if(!latlngs || latlngs.length<2){ cb(latlngs||[]); return; }
+    var pts=_downsample(latlngs, 95);
+    var coords=pts.map(function(p){return p[1].toFixed(6)+','+p[0].toFixed(6);}).join(';'); // OSRM usa lon,lat
+    var rad=pts.map(function(){return '40';}).join(';');
+    var url='https://router.project-osrm.org/match/v1/driving/'+coords+'?geometries=geojson&overview=full&tidy=true&radiuses='+rad;
+    var ctrl=(typeof AbortController!=='undefined')?new AbortController():null;
+    var tm=setTimeout(function(){ if(ctrl) ctrl.abort(); }, 12000);
+    fetch(url,{signal:ctrl?ctrl.signal:undefined}).then(function(r){return r.json();}).then(function(j){
+      clearTimeout(tm);
+      if(j && j.code==='Ok' && j.matchings && j.matchings.length){
+        var out=[];
+        j.matchings.forEach(function(m){ if(m.geometry&&m.geometry.coordinates){ m.geometry.coordinates.forEach(function(c){ out.push([c[1],c[0]]); }); } });
+        cb(out.length>1 ? out : latlngs);
+      } else cb(latlngs);
+    }).catch(function(){ clearTimeout(tm); cb(latlngs); });
+  }catch(e){ cb(latlngs); }
+}
 var ultActualiza = 0;
 
 function hoyISO(){
@@ -579,10 +613,18 @@ function pintarMapa(){
     var tr = trail.map(function(p){return [p[0],p[1]];});
     var foco = [];   // puntos a los que encuadrar el mapa
 
-    // 1) LÍNEA DEL RECORRIDO — clara: trazo blanco de fondo + azul encima
+    // 1) LÍNEA DEL RECORRIDO — pegada a las calles (OSRM); trazo blanco de fondo + azul encima
     if(tr.length>1){
-      L.polyline(tr,{color:'#fff', weight:7, opacity:.9}).addTo(CAPA);
-      L.polyline(tr,{color:'#0EA5F9', weight:4, opacity:1}).addTo(CAPA);
+      var sig=snapSig(SELECCION, trail);
+      var snapped=_snapCache[sig];
+      var linea = snapped || tr;   // si ya está pegada a calles, úsala; si no, recta por ahora
+      L.polyline(linea,{color:'#fff', weight:7, opacity:.9}).addTo(CAPA);
+      L.polyline(linea,{color:'#0EA5F9', weight:4, opacity:1}).addTo(CAPA);
+      if(!snapped){
+        // pedir a OSRM que pegue el recorrido a las calles y re-pintar cuando responda
+        var _selU=SELECCION;
+        snapToRoads(tr, function(res){ _snapCache[sig]=res; if(SELECCION===_selU && !ANIMANDO) render(); });
+      }
     }
     // puntitos intermedios suaves (para ver cada señal sin tapar la línea)
     trail.forEach(function(p,i){
@@ -684,7 +726,10 @@ function reproducirDesplazamiento(u){
   var d=DATOS[u]; if(!d || d.trail.length<2) return;
   detenerDesplazamiento();
   SELECCION=u; ANIMANDO=true; ANIM_USER=u;
-  var full = d.trail.map(function(p){return [p[0],p[1]];});
+  var trReal = d.trail.map(function(p){return [p[0],p[1]];});
+  var full = _snapCache[snapSig(u, d.trail)] || trReal;  // seguir las calles si ya está pegado
+  var nReal = d.trail.length;
+  var horaEn = function(idx, n){ var k=Math.round((idx/Math.max(1,n-1))*(nReal-1)); if(k<0)k=0; if(k>nReal-1)k=nReal-1; return horaMM(d.trail[k][2]); };
   CAPA.clearLayers();
   document.getElementById('legend').style.display='flex';
   // ruta completa tenue de fondo
@@ -698,16 +743,16 @@ function reproducirDesplazamiento(u){
   var trazado=[full[0]];
   var linea=L.polyline(trazado,{color:'#0EA5F9', weight:5, opacity:1}).addTo(CAPA);
   ANIM_MK=L.marker(full[0],{icon:iconMover(0), zIndexOffset:1000}).addTo(CAPA);
-  ANIM_MK.bindTooltip(horaMM(d.trail[0][2]),{permanent:true,direction:'top',className:'hito-lbl act',offset:[0,-12]});
+  ANIM_MK.bindTooltip(horaEn(0,full.length),{permanent:true,direction:'top',className:'hito-lbl act',offset:[0,-12]});
   render();  // el botón pasa a "Detener"
   var i=1, n=full.length;
-  var paso=Math.max(120, Math.min(800, Math.round(20000/n)));  // ~20s en total
+  var paso=Math.max(60, Math.min(800, Math.round(20000/n)));  // ~20s en total
   ANIM=setInterval(function(){
     if(i>=n){ finDesplazamiento(u); return; }
     var prev=full[i-1], cur=full[i];
     trazado.push(cur); linea.setLatLngs(trazado);
     ANIM_MK.setLatLng(cur); ANIM_MK.setIcon(iconMover(rumbo(prev,cur)));
-    ANIM_MK.setTooltipContent(horaMM(d.trail[i][2]));
+    ANIM_MK.setTooltipContent(horaEn(i,n));
     MAPA.panTo(cur,{animate:true,duration:.25});
     i++;
   }, paso);
