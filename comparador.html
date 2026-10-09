@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="theme-color" content="#0F172A"/>
+<title>Aspery · Comparador Sheets vs Firebase</title>
+<style>
+:root{--navy:#0F172A;--blue:#0EA5F9;--green:#16A34A;--amber:#F59E0B;--red:#DC2626;--bg:#F1F5F9;--card:#fff;--line:#E2E8F0;--t1:#0F172A;--t2:#475569;--t3:#94A3B8;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--navy);min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:24px;color:var(--t1)}
+.box{background:var(--card);border-radius:18px;max-width:680px;width:100%;padding:28px;box-shadow:0 20px 50px rgba(0,0,0,.35)}
+h1{font-size:21px;font-weight:800;color:var(--navy)}h1 b{color:var(--blue)}
+.sub{font-size:13px;color:var(--t2);margin:4px 0 18px;line-height:1.6}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px}
+.fld{flex:1;min-width:140px}
+label{display:block;font-size:12px;font-weight:600;color:var(--t2);margin-bottom:5px}
+input{width:100%;height:44px;border:1.5px solid var(--line);border-radius:10px;padding:0 12px;font-size:14px}
+input:focus{outline:none;border-color:var(--blue)}
+button{background:var(--blue);color:#fff;border:none;border-radius:10px;padding:13px 20px;font-size:15px;font-weight:700;cursor:pointer;width:100%;margin-top:6px}
+button:disabled{opacity:.55;cursor:default}
+table{width:100%;border-collapse:collapse;margin-top:18px;font-size:14px}
+th,td{padding:11px 10px;text-align:left;border-bottom:1px solid var(--line)}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--t2)}
+td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.ok{color:var(--green);font-weight:800}.warn{color:var(--amber);font-weight:800}.bad{color:var(--red);font-weight:800}
+.vd{margin-top:18px;padding:14px;border-radius:12px;font-size:14px;font-weight:600;display:none}
+.vd.good{background:#DCFCE7;color:#15803D}.vd.check{background:#FEF3C7;color:#B45309}
+.hint{font-size:11.5px;color:var(--t3);margin-top:12px;line-height:1.6}
+.grp{font-size:11px;font-weight:800;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;padding-top:14px}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>Asper<b>y</b> · Comparador</h1>
+  <div class="sub">Compara los números de <b>Google Sheets</b> y <b>Firebase</b> para un rango de fechas. Si cuadran, puedes dejar el dashboard en Firebase con confianza.</div>
+
+  <div class="row">
+    <div class="fld"><label>Desde</label><input type="date" id="desde"/></div>
+    <div class="fld"><label>Hasta</label><input type="date" id="hasta"/></div>
+  </div>
+  <button id="btn" onclick="comparar()">🔍 Comparar</button>
+
+  <table id="tabla" style="display:none">
+    <thead><tr><th>Métrica</th><th class="num">Sheets</th><th class="num">Firebase</th><th>Estado</th></tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  <div class="vd" id="vd"></div>
+  <div class="hint" id="hint"></div>
+</div>
+
+<script>
+var SCRIPT_URL='https://script.google.com/macros/s/AKfycbzC_ANIW871GP6G3uUWowoaSHo-4cIAhObFL7xp8m_ZJjdqs2P9KWYxZIcGAX9oy8cl/exec';
+var APP_TOKEN='ASP-dcdc1d72bd13356a6f1d0e58eda80435';
+var FB_PROJECT='aspery-8780d';
+var FB_KEY='AIzaSyCabjIjVRCXb_BlNTXi_QHQw9yNhBV6IIE';
+var FB_RUNQUERY='https://firestore.googleapis.com/v1/projects/'+FB_PROJECT+'/databases/(default)/documents:runQuery?key='+FB_KEY;
+var PROMS=['PROMLIM1','PROMLIM3','PROMLIM5','PROMLIM6','PROMICA','PROMAQP','PROMCUS','PROMTAC','PROMTPP','PROMHYO','PROMTRUX','PROMCIX','PROMPIU'];
+
+function hoyISO(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fetchTO(url,opts,ms){ opts=opts||{}; var c=(typeof AbortController!=='undefined')?new AbortController():null; var t=setTimeout(function(){if(c)c.abort();},ms||30000); if(c)opts.signal=c.signal; return fetch(url,opts).then(function(r){clearTimeout(t);return r;}); }
+function normF(v){ var s=String(v||''); return s.indexOf('T')>=0?s.slice(0,10):s.slice(0,10); }
+
+// ── Sheets ──
+function gasGet(accion, base){
+  var p=Object.assign({accion:accion, tk:APP_TOKEN}, base);
+  var qs=Object.keys(p).map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(p[k]);}).join('&');
+  return fetchTO(SCRIPT_URL+'?'+qs,{method:'GET'},45000).then(function(r){return r.json();}).then(function(j){ return (j&&j.status==='ok'&&j.filas)?j.filas:null; }).catch(function(){ return null; });
+}
+// ── Firebase ──
+function fv(d,k){ var f=d&&d.fields&&d.fields[k]; if(!f)return ''; if('stringValue'in f)return f.stringValue; if('doubleValue'in f)return f.doubleValue; if('integerValue'in f)return Number(f.integerValue); return ''; }
+function fbQuery(coll, desde, hasta){
+  var body={structuredQuery:{from:[{collectionId:coll}],where:{compositeFilter:{op:'AND',filters:[
+    {fieldFilter:{field:{fieldPath:'fecha'},op:'GREATER_THAN_OR_EQUAL',value:{stringValue:desde}}},
+    {fieldFilter:{field:{fieldPath:'fecha'},op:'LESS_THAN_OR_EQUAL',value:{stringValue:hasta}}}
+  ]}}}};
+  return fetchTO(FB_RUNQUERY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)},30000)
+    .then(function(r){return r.json();}).then(function(j){ var out=[]; if(Array.isArray(j))j.forEach(function(x){if(x&&x.document)out.push(x.document);}); return out; }).catch(function(){ return null; });
+}
+
+// ── Métricas (misma lógica para ambas fuentes) ──
+function metricasSheetsMarca(filas){ // CAB_MARCA: usuario idx6, fecha idx1
+  if(!filas) return null; var n=0; filas.forEach(function(f){ if(PROMS.indexOf(String(f[6]||'').trim().toUpperCase())>=0) n++; }); return n;
+}
+function metricasSheetsVentas(filas){ // CAB_REG
+  if(!filas) return null; var ids={}, rows=0;
+  filas.forEach(function(f){ var u=String(f[4]||'').trim().toUpperCase(); if(PROMS.indexOf(u)<0) return; rows++;
+    var id=String(f[0]||''); if(!ids[id]) ids[id]={pedido:String(f[16]||'').toUpperCase().indexOf('SI')>=0, total:0};
+    var t=parseFloat(f[24])||0; if(t>ids[id].total) ids[id].total=t;
+  });
+  var vis=0, ped=0, tot=0; Object.keys(ids).forEach(function(k){ vis++; if(ids[k].pedido)ped++; tot+=ids[k].total; });
+  return {rows:rows, visitas:vis, pedidos:ped, total:tot};
+}
+function metricasSheetsStock(filas){ // CAB_STOCK: usuario idx3
+  if(!filas) return null; var n=0; filas.forEach(function(f){ if(PROMS.indexOf(String(f[3]||'').trim().toUpperCase())>=0) n++; }); return n;
+}
+function metricasFBMarca(docs){ if(!docs)return null; var n=0; docs.forEach(function(d){ if(PROMS.indexOf(String(fv(d,'usuario')||'').trim().toUpperCase())>=0)n++; }); return n; }
+function metricasFBVentas(docs){
+  if(!docs)return null; var ids={}, rows=0;
+  docs.forEach(function(d){ var u=String(fv(d,'usuario')||'').trim().toUpperCase(); if(PROMS.indexOf(u)<0)return; rows++;
+    var id=String(fv(d,'id')||''); if(!ids[id])ids[id]={pedido:String(fv(d,'pedido')||'').toUpperCase().indexOf('SI')>=0,total:0};
+    var t=parseFloat(fv(d,'total'))||0; if(t>ids[id].total)ids[id].total=t;
+  });
+  var vis=0,ped=0,tot=0; Object.keys(ids).forEach(function(k){vis++; if(ids[k].pedido)ped++; tot+=ids[k].total;});
+  return {rows:rows,visitas:vis,pedidos:ped,total:tot};
+}
+function metricasFBStock(docs){ if(!docs)return null; var n=0; docs.forEach(function(d){ if(PROMS.indexOf(String(fv(d,'usuario')||'').trim().toUpperCase())>=0)n++; }); return n; }
+
+function fila(nombre, sh, fb, tol){
+  tol=tol||0;
+  var cls, est;
+  if(sh===null||fb===null){ est='no se pudo leer'; cls='bad'; }
+  else { var dif=Math.abs(sh-fb); if(dif<=tol){ est='✓ cuadra'; cls='ok'; } else { est='⚠ dif. '+(Math.round(dif*100)/100); cls='bad'; } }
+  var fmt=function(v){ return v===null?'—':(typeof v==='number'?v.toLocaleString('es-PE',{maximumFractionDigits:2}):v); };
+  return '<tr><td>'+nombre+'</td><td class="num">'+fmt(sh)+'</td><td class="num">'+fmt(fb)+'</td><td class="'+cls+'">'+est+'</td></tr>';
+}
+
+function comparar(){
+  var desde=document.getElementById('desde').value, hasta=document.getElementById('hasta').value;
+  if(!desde||!hasta){ alert('Elige el rango de fechas.'); return; }
+  var b=document.getElementById('btn'); b.disabled=true; b.textContent='Comparando…';
+  document.getElementById('vd').style.display='none';
+  document.getElementById('tabla').style.display='table';
+  document.getElementById('tbody').innerHTML='<tr><td colspan="4" style="text-align:center;color:#94A3B8">Consultando ambas fuentes…</td></tr>';
+  var base={promotoras:PROMS.join(','), desde:desde, hasta:hasta};
+
+  Promise.all([
+    gasGet('listar_marcaciones', base), gasGet('listar_equipo', base), gasGet('listar_stock', base),
+    fbQuery('marcaciones', desde, hasta), fbQuery('ventas', desde, hasta), fbQuery('stock', desde, hasta)
+  ]).then(function(R){
+    var shM=metricasSheetsMarca(R[0]), shV=metricasSheetsVentas(R[1]), shS=metricasSheetsStock(R[2]);
+    var fbM=metricasFBMarca(R[3]), fbV=metricasFBVentas(R[4]), fbS=metricasFBStock(R[5]);
+    var h='';
+    h+='<tr><td class="grp" colspan="4">Marcaciones</td></tr>';
+    h+=fila('Marcaciones (registros)', shM, fbM);
+    h+='<tr><td class="grp" colspan="4">Ventas / pedidos</td></tr>';
+    h+=fila('Visitas (relevos únicos)', shV?shV.visitas:null, fbV?fbV.visitas:null);
+    h+=fila('Con pedido', shV?shV.pedidos:null, fbV?fbV.pedidos:null);
+    h+=fila('Líneas de pedido (SKUs)', shV?shV.rows:null, fbV?fbV.rows:null);
+    h+=fila('Total vendido (S/)', shV?Math.round(shV.total*100)/100:null, fbV?Math.round(fbV.total*100)/100:null, 1);
+    h+='<tr><td class="grp" colspan="4">Stock</td></tr>';
+    h+=fila('Stock (registros)', shS, fbS);
+    document.getElementById('tbody').innerHTML=h;
+
+    var pares=[[shM,fbM],[shV&&shV.visitas,fbV&&fbV.visitas],[shV&&shV.pedidos,fbV&&fbV.pedidos],[shV&&shV.rows,fbV&&fbV.rows],[shS,fbS]];
+    var okTodo=pares.every(function(p){ return p[0]!==null&&p[1]!==null&&p[0]!=null&&p[1]!=null&&Math.abs(p[0]-p[1])<=0; });
+    var vd=document.getElementById('vd'); vd.style.display='block';
+    if(okTodo){ vd.className='vd good'; vd.textContent='✅ Todo cuadra. Firebase tiene los mismos números que Sheets en este rango — puedes usar el dashboard en modo Firebase con confianza.'; }
+    else { vd.className='vd check'; vd.textContent='⚠ Hay diferencias. Si es en fechas ANTERIORES al APK #26, es normal (Firebase aún no tenía todos los campos). Para fechas de hoy en adelante deberían cuadrar.'; }
+    document.getElementById('hint').innerHTML='Nota: el "Total vendido" admite ±1 sol por redondeos. Las ventas viejas (antes del #26) pueden diferir porque Firebase no tenía todos los campos; compara un día DESDE que instalaste el #26 para la prueba real.';
+    b.disabled=false; b.textContent='🔍 Comparar de nuevo';
+  });
+}
+
+// Por defecto: hoy
+(function(){ var h=hoyISO(); document.getElementById('desde').value=h; document.getElementById('hasta').value=h; })();
+</script>
+</body>
+</html>
