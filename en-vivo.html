@@ -54,6 +54,13 @@ button{font-family:inherit;cursor:pointer}
 #map{flex:1;min-height:0}
 .mk-pin{display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:11px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 7px rgba(0,0,0,.45);border:2px solid #fff}
 .mk-pin span{transform:rotate(45deg)}
+.hito{display:flex;align-items:center;justify-content:center;width:26px;height:26px;color:#fff;font-weight:800;font-size:12px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 6px rgba(0,0,0,.4);border:2px solid #fff}
+.hito{line-height:0}
+.map-wrap{flex:1;min-height:0;position:relative;display:flex;flex-direction:column}
+.rec-bar{display:none;align-items:center;gap:10px;background:#0F172A;color:#fff;padding:9px 14px;font-size:13px;flex-shrink:0}
+.rec-bar b{color:#38BDF8}
+.rec-bar .info{color:#CBD5E1;font-size:12px}
+.rec-bar .x{margin-left:auto;background:rgba(255,255,255,.14);border:none;color:#fff;font-size:12px;font-weight:600;padding:6px 12px;border-radius:8px;cursor:pointer}
 .empty{padding:40px 18px;text-align:center;color:var(--t3);font-size:13px;line-height:1.7}
 .empty .ic{font-size:36px;display:block;margin-bottom:8px}
 @media(max-width:720px){
@@ -93,7 +100,10 @@ button{font-family:inherit;cursor:pointer}
       <div class="list-h" id="list-h">Equipo</div>
       <div id="list"></div>
     </div>
-    <div id="map"></div>
+    <div class="map-wrap">
+      <div class="rec-bar" id="rec-bar">📍 Recorrido de <b id="rec-nm"></b> <span class="info" id="rec-info"></span><button class="x" onclick="cerrarRecorrido()">✕ Cerrar recorrido</button></div>
+      <div id="map"></div>
+    </div>
   </div>
 </div>
 
@@ -101,6 +111,12 @@ button{font-family:inherit;cursor:pointer}
 // ===== CONFIG =====
 var FB_PROJECT='aspery-8780d';
 var FB_KEY='AIzaSyCabjIjVRCXb_BlNTXi_QHQw9yNhBV6IIE';
+
+// Para leer el recorrido del día (historial de señales) desde Google Sheets
+var SCRIPT_URL='https://script.google.com/macros/s/AKfycbzC_ANIW871GP6G3uUWowoaSHo-4cIAhObFL7xp8m_ZJjdqs2P9KWYxZIcGAX9oy8cl/exec';
+var APP_TOKEN='ASP-dcdc1d72bd13356a6f1d0e58eda80435';
+// ← PEGA AQUÍ tu token de Mapbox (gratis). Si queda vacío, usa OSRM automáticamente.
+var MAPBOX_TOKEN='';
 
 var LOGIN={
   'JEFECANAL'  :{pass:'JEFE123$', nombre:'Sebastian Pereyra', equipo:'TODOS'},
@@ -194,10 +210,11 @@ function render(){
       else{
         var ic=L.divIcon({className:'',html:'<div class="mk-pin" style="width:30px;height:30px;background:'+col+'"><span>'+inic(u)+'</span></div>',iconSize:[30,30],iconAnchor:[15,30]});
         _marks[u]=L.marker([d.lat,d.lng],{icon:ic}).addTo(_map);
+        (function(uu){ _marks[uu].on('click', function(){ verRecorrido(uu); }); })(u);
       }
       _marks[u].bindTooltip(u+' · '+(d.hora?d.hora.slice(0,5):'')+' ('+agoTxt(d.tsMs)+')',{direction:'top',offset:[0,-28]});
-      listHtml+='<div class="it" onclick="irA('+d.lat+','+d.lng+')"><div class="av" style="background:'+col+'">'+inic(u)+'</div>'
-        +'<div><div class="nm">'+u+'</div><div class="sub">'+(d.hora?d.hora.slice(0,5):'')+(d.bat?' · 🔋'+d.bat:'')+'</div></div>'
+      listHtml+='<div class="it" onclick="verRecorrido(\''+u+'\')"><div class="av" style="background:'+col+'">'+inic(u)+'</div>'
+        +'<div><div class="nm">'+u+'</div><div class="sub">'+(d.hora?d.hora.slice(0,5):'')+(d.bat?' · 🔋'+d.bat:'')+' · ver recorrido ›</div></div>'
         +'<span class="ago '+cls+'">'+agoTxt(d.tsMs)+'</span></div>';
     } else {
       if(_marks[u]){ _map.removeLayer(_marks[u]); delete _marks[u]; }
@@ -209,6 +226,75 @@ function render(){
   if(_first && pts.length){ _first=false; try{ _map.fitBounds(pts,{padding:[45,45],maxZoom:15}); }catch(e){} }
 }
 function irA(lat,lng){ if(_map) _map.setView([lat,lng],16,{animate:true}); }
+
+// ════════ RECORRIDO DEL DÍA (por calles) ════════
+function gasGet(params,cb){
+  params=params||{}; params.tk=APP_TOKEN;
+  var qs=Object.keys(params).map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(params[k]);}).join('&');
+  var ctrl=(typeof AbortController!=='undefined')?new AbortController():null;
+  var tm=setTimeout(function(){if(ctrl)ctrl.abort();},18000);
+  fetch(SCRIPT_URL+'?'+qs,{signal:ctrl?ctrl.signal:undefined}).then(function(r){clearTimeout(tm);return r.json();}).then(cb).catch(function(){clearTimeout(tm);cb(null);});
+}
+function recHora(h){ h=String(h||''); var iso=h.match(/T(\d{2}):(\d{2}):(\d{2})/); if(iso){var hh=(parseInt(iso[1],10)+24-5)%24;return ('0'+hh).slice(-2)+':'+iso[2];} var m=h.match(/(\d{1,2}:\d{2})/); return m?m[1]:''; }
+function recFix(v,max){ var n=parseFloat(v); if(isNaN(n))return NaN; var g=0; while(Math.abs(n)>max&&g<10){n=n/10;g++;} return Math.round(n*1e6)/1e6; }
+function _downsample(arr,max){ if(arr.length<=max)return arr.slice(); var out=[],step=(arr.length-1)/(max-1); for(var i=0;i<max;i++)out.push(arr[Math.round(i*step)]); return out; }
+// Pega los puntos a las calles. Mapbox si hay token; si no, OSRM. Si falla, línea recta.
+function snapToRoads(latlngs,cb){
+  try{
+    if(!latlngs||latlngs.length<2){cb(latlngs||[]);return;}
+    var pts=_downsample(latlngs,95);
+    var c=pts.map(function(p){return p[1].toFixed(6)+','+p[0].toFixed(6);}).join(';');
+    var r=pts.map(function(){return '40';}).join(';');
+    var url = MAPBOX_TOKEN
+      ? 'https://api.mapbox.com/matching/v5/mapbox/walking/'+c+'?geometries=geojson&overview=full&radiuses='+r+'&access_token='+MAPBOX_TOKEN
+      : 'https://router.project-osrm.org/match/v1/driving/'+c+'?geometries=geojson&overview=full&tidy=true&radiuses='+r;
+    var ctrl=(typeof AbortController!=='undefined')?new AbortController():null;
+    var tm=setTimeout(function(){if(ctrl)ctrl.abort();},12000);
+    fetch(url,{signal:ctrl?ctrl.signal:undefined}).then(function(x){clearTimeout(tm);return x.json();}).then(function(j){
+      var ms=j&&j.matchings;
+      if(ms&&ms.length){ var out=[]; ms.forEach(function(m){ if(m.geometry&&m.geometry.coordinates) m.geometry.coordinates.forEach(function(cc){out.push([cc[1],cc[0]]);}); }); cb(out.length>1?out:latlngs); }
+      else cb(latlngs);
+    }).catch(function(){clearTimeout(tm);cb(latlngs);});
+  }catch(e){cb(latlngs);}
+}
+var _recCapa=null, _recUser=null;
+function verRecorrido(u){
+  _recUser=u;
+  if(!_recCapa) _recCapa=L.layerGroup().addTo(_map);
+  _recCapa.clearLayers();
+  document.getElementById('rec-bar').style.display='flex';
+  document.getElementById('rec-nm').textContent=u;
+  document.getElementById('rec-info').textContent='Cargando recorrido…';
+  var d=_datos[u]; if(d){ try{_map.setView([d.lat,d.lng],15,{animate:true});}catch(e){} }
+  gasGet({accion:'listar_ubicaciones',promotoras:u,fecha:hoyISO()},function(r){
+    if(_recUser!==u) return;
+    var filas=(r&&r.status==='ok'&&r.filas)?r.filas:[];
+    var trail=filas.map(function(f){return [recFix(f[4],90),recFix(f[5],180),recHora(f[2])];})
+      .filter(function(p){return !isNaN(p[0])&&!isNaN(p[1])&&p[0]<1&&p[0]>-19.5&&p[1]<-68&&p[1]>-82;});
+    trail.sort(function(a,b){return a[2]<b[2]?-1:1;});
+    dibujarRecorrido(u,trail);
+  });
+}
+function dibujarRecorrido(u,trail){
+  if(_recUser!==u) return;
+  _recCapa.clearLayers();
+  if(!trail.length){ document.getElementById('rec-info').textContent='Sin recorrido hoy (aún no hay señales).'; return; }
+  document.getElementById('rec-info').textContent=trail.length+' señales · desde '+(trail[0][2]||'');
+  var tr=trail.map(function(p){return [p[0],p[1]];});
+  var pintar=function(linea){
+    if(_recUser!==u) return;
+    _recCapa.clearLayers();
+    if(linea.length>1){ L.polyline(linea,{color:'#fff',weight:7,opacity:.9}).addTo(_recCapa); L.polyline(linea,{color:'#0EA5F9',weight:4,opacity:1}).addTo(_recCapa); }
+    trail.forEach(function(p,i){ if(i===trail.length-1)return; L.circleMarker([p[0],p[1]],{radius:3,color:'#0EA5F9',weight:1,fillColor:'#fff',fillOpacity:1}).addTo(_recCapa).bindTooltip('Señal '+(i+1)+(p[2]?(' · '+p[2]):''),{direction:'top'}); });
+    L.marker([trail[0][0],trail[0][1]],{icon:L.divIcon({className:'',html:'<div class="hito" style="background:#F59E0B">I</div>',iconSize:[26,26],iconAnchor:[13,26]})}).addTo(_recCapa).bindTooltip('Inicio'+(trail[0][2]?(' · '+trail[0][2]):''),{permanent:true,direction:'right',offset:[8,-6]});
+    var last=trail[trail.length-1];
+    L.circleMarker([last[0],last[1]],{radius:9,color:'#fff',weight:3,fillColor:'#16A34A',fillOpacity:1}).addTo(_recCapa).bindTooltip('Aquí ahora'+(last[2]?(' · '+last[2]):''),{permanent:true,direction:'top',offset:[0,-6]});
+    try{ _map.fitBounds(tr,{padding:[55,55],maxZoom:16}); }catch(e){}
+  };
+  pintar(tr);                                   // recta primero
+  snapToRoads(tr,function(res){ pintar(res); }); // luego pegada a calles
+}
+function cerrarRecorrido(){ _recUser=null; if(_recCapa) _recCapa.clearLayers(); document.getElementById('rec-bar').style.display='none'; }
 
 // reanudar sesión
 (function(){ try{ var s=localStorage.getItem('aspery_envivo'); if(s){ var o=JSON.parse(s); if(o&&o.user&&LOGIN[o.user]){ SESION=o; entrar(); } } }catch(x){} })();
