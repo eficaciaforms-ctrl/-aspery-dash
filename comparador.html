@@ -46,6 +46,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
     <tbody id="tbody"></tbody>
   </table>
   <div class="vd" id="vd"></div>
+  <div id="porprom" style="margin-top:18px"></div>
   <div class="hint" id="hint"></div>
 </div>
 
@@ -147,9 +148,32 @@ function comparar(){
     var vd=document.getElementById('vd'); vd.style.display='block';
     if(okTodo){ vd.className='vd good'; vd.textContent='✅ Todo cuadra. Firebase tiene los mismos números que Sheets en este rango — puedes usar el dashboard en modo Firebase con confianza.'; }
     else { vd.className='vd check'; vd.textContent='⚠ Hay diferencias. Si es en fechas ANTERIORES al APK #26, es normal (Firebase aún no tenía todos los campos). Para fechas de hoy en adelante deberían cuadrar.'; }
-    document.getElementById('hint').innerHTML='Nota: el "Total vendido" admite ±1 sol por redondeos. Las ventas viejas (antes del #26) pueden diferir porque Firebase no tenía todos los campos; compara un día DESDE que instalaste el #26 para la prueba real.';
+    document.getElementById('hint').innerHTML='Nota: el "Total vendido" admite ±1 sol por redondeos. Las diferencias suelen ser de promotoras que ese día aún no tenían el app nuevo (escribieron solo a Sheets). Mira el detalle por promotora 👇';
+    pintarPorPromotora(R[1], R[4]);
     b.disabled=false; b.textContent='🔍 Comparar de nuevo';
   });
+}
+
+// Detalle por promotora: visitas (relevos únicos) en Sheets vs Firebase.
+// Si Firebase sale muy por debajo (o 0) para una promotora → ese día no estaba en el app nuevo.
+function pintarPorPromotora(shV, fbV){
+  var sh={}, fb={};
+  (shV||[]).forEach(function(f){ var u=String(f[4]||'').trim().toUpperCase(); if(PROMS.indexOf(u)<0) return; var id=String(f[0]||''); if(!id) return; (sh[u]=sh[u]||{})[id]=1; });
+  (fbV||[]).forEach(function(d){ var u=String(fv(d,'usuario')||'').trim().toUpperCase(); if(PROMS.indexOf(u)<0) return; var id=String(fv(d,'id')||''); if(!id) return; (fb[u]=fb[u]||{})[id]=1; });
+  var filas='';
+  PROMS.slice().sort().forEach(function(u){
+    var s=sh[u]?Object.keys(sh[u]).length:0, f=fb[u]?Object.keys(fb[u]).length:0;
+    if(s===0 && f===0) return; // sin actividad ese día → no listar
+    var cls,est;
+    if(f>=s){ cls='ok'; est='✓'; }
+    else if(f===0){ cls='bad'; est='⚠ falta en Firebase (app viejo)'; }
+    else { cls='warn'; est='⚠ faltan '+(s-f); }
+    filas+='<tr><td><b>'+u+'</b></td><td class="num">'+s+'</td><td class="num">'+f+'</td><td class="'+cls+'">'+est+'</td></tr>';
+  });
+  var cont=document.getElementById('porprom');
+  if(!filas){ cont.innerHTML=''; return; }
+  cont.innerHTML='<div class="grp" style="padding-top:0">Detalle por promotora · visitas</div>'+
+    '<table><thead><tr><th>Promotora</th><th class="num">Sheets</th><th class="num">Firebase</th><th>Estado</th></tr></thead><tbody>'+filas+'</tbody></table>';
 }
 
 // Por defecto: hoy
