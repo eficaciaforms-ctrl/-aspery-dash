@@ -266,9 +266,33 @@ function verRecorrido(u){
   document.getElementById('rec-nm').textContent=u;
   document.getElementById('rec-info').textContent='Cargando recorrido…';
   var d=_datos[u]; if(d){ try{_map.setView([d.lat,d.lng],15,{animate:true});}catch(e){} }
+  cargarRecorridoFB(u);  // 1º intenta Firebase (rápido); si no hay, cae a Sheets
+}
+// Lee el recorrido del día desde Firebase (campo uf = usuario_fecha, sin índices compuestos)
+function cargarRecorridoFB(u){
+  try{
+    if(!_db){ cargarRecorridoSheets(u); return; }
+    _db.collection('ubicaciones').where('uf','==', u+'_'+hoyISO()).get().then(function(snap){
+      if(_recUser!==u) return;
+      var trail=[];
+      snap.forEach(function(doc){
+        var d=doc.data()||{}; var la=Number(d.lat), ln=Number(d.lng);
+        if(isNaN(la)||isNaN(ln)) return;
+        if(la>1||la<-19.5||ln>-68||ln<-82) return;
+        var ms=0; try{ ms=d.ts&&d.ts.toMillis?d.ts.toMillis():(d.ts?new Date(d.ts).getTime():0); }catch(e){}
+        trail.push([la,ln,String(d.hora||'').slice(0,5),ms]);
+      });
+      if(!trail.length){ cargarRecorridoSheets(u); return; }  // día viejo → Sheets
+      trail.sort(function(a,b){ return (a[3]||0)-(b[3]||0); });
+      dibujarRecorrido(u, trail.map(function(p){return [p[0],p[1],p[2]];}));
+    }).catch(function(){ cargarRecorridoSheets(u); });
+  }catch(e){ cargarRecorridoSheets(u); }
+}
+// Respaldo: días anteriores al #28 (solo están en Google Sheets)
+function cargarRecorridoSheets(u){
   gasGet({accion:'listar_ubicaciones',promotoras:u,fecha:hoyISO()},function(r){
     if(_recUser!==u) return;
-    if(r===null){ document.getElementById('rec-info').textContent='No se pudo cargar (muchos datos). Toca de nuevo.'; return; }
+    if(r===null){ document.getElementById('rec-info').textContent='No se pudo cargar. Toca de nuevo.'; return; }
     var filas=(r&&r.status==='ok'&&r.filas)?r.filas:[];
     var trail=filas.map(function(f){return [recFix(f[4],90),recFix(f[5],180),recHora(f[2])];})
       .filter(function(p){return !isNaN(p[0])&&!isNaN(p[1])&&p[0]<1&&p[0]>-19.5&&p[1]<-68&&p[1]>-82;});
