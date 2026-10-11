@@ -395,6 +395,8 @@ button{font-family:inherit;}
     </div>
     <div class="topbar-r">
       <span id="auto-chip" class="auto-chip"><span class="auto-dot"></span> Actualizado hace 0s</span>
+      <a class="btn-icon" href="en-vivo.html" title="Seguimiento en vivo: ubicación y recorrido de las promotoras" style="width:auto;padding:0 12px;font-size:12px;font-weight:700;text-decoration:none;background:#0EA5F9;color:#fff;display:inline-flex;align-items:center;gap:6px">🛰️ En vivo</a>
+      <button class="btn-icon" id="btn-fuente" onclick="toggleFuente()" title="Fuente de datos: Sheets o Firebase" style="width:auto;padding:0 10px;font-size:12px;font-weight:600">Datos: Sheets</button>
       <button class="btn-icon" onclick="recargar()" title="Recargar ahora">↻</button>
       <button class="btn-icon" onclick="abrirConfigURL()" title="Configurar conexión GAS">⚙</button>
       <button class="btn-icon" onclick="logout()" title="Cerrar sesión">⎋</button>
@@ -1119,7 +1121,7 @@ function setScriptURL(url) {
 // Llamar al GAS mediante GET (JSONP-style con query params)
 var _gasCache = {};
 var GAS_TTL = 60000; // reusar respuesta hasta 60s (velocidad)
-function gasGetReal(params, callback) {
+function _gasGetSheets(params, callback) {
   var url = getScriptURL();
   if (!url) { callback(null); return; }
   params = params || {}; params.tk = "ASP-dcdc1d72bd13356a6f1d0e58eda80435";
@@ -1152,6 +1154,79 @@ function gasGetReal(params, callback) {
   }
   go();
 }
+
+// ════════════════════════════════════════════════════════
+// PARTE 2B · FUENTE DE DATOS: Sheets (por defecto) o Firebase (opt-in)
+// El botón "Datos" en la barra alterna. Por defecto Sheets (seguro).
+// Firebase lee marcaciones/ventas/stock directo de Firestore (más rápido).
+// Si Firebase falla, cae automáticamente a Sheets.
+// ════════════════════════════════════════════════════════
+var FB_PROJECT_D='aspery-8780d';
+var FB_KEY_D='AIzaSyCabjIjVRCXb_BlNTXi_QHQw9yNhBV6IIE';
+var FB_RUNQUERY='https://firestore.googleapis.com/v1/projects/'+FB_PROJECT_D+'/databases/(default)/documents:runQuery?key='+FB_KEY_D;
+
+function getFuente(){ try{ return localStorage.getItem('dash_fuente')==='firebase'?'firebase':'sheets'; }catch(e){ return 'sheets'; } }
+function setFuente(f){ try{ localStorage.setItem('dash_fuente', f); }catch(e){} }
+function pintarFuente(){ var b=document.getElementById('btn-fuente'); if(b){ var f=getFuente(); b.textContent='Datos: '+(f==='firebase'?'Firebase ⚡':'Sheets'); b.style.background=(f==='firebase'?'#16A34A':''); b.style.color='#fff'; } }
+function toggleFuente(){
+  var f=getFuente()==='firebase'?'sheets':'firebase'; setFuente(f); pintarFuente(); _gasCache={};
+  if(f==='firebase') alert('Fuente cambiada a FIREBASE ⚡ (más rápido).\n\nNota: los datos completos en Firebase existen desde que el APK #26 empezó a escribir. Para fechas anteriores, usa Sheets.');
+  else alert('Fuente cambiada a Google Sheets (la de siempre).');
+  if(typeof recargar==='function') recargar();
+}
+
+// Lee un campo de un documento Firestore (stringValue / doubleValue / integerValue)
+function _fvD(d,k){ var f=d&&d.fields&&d.fields[k]; if(!f) return ''; if('stringValue' in f) return f.stringValue; if('doubleValue' in f) return f.doubleValue; if('integerValue' in f) return Number(f.integerValue); return ''; }
+
+function fbRunQuery(coll, desde, hasta, cb){
+  try{
+    var body={ structuredQuery:{ from:[{collectionId:coll}], where:{ compositeFilter:{ op:'AND', filters:[
+      {fieldFilter:{field:{fieldPath:'fecha'},op:'GREATER_THAN_OR_EQUAL',value:{stringValue:String(desde)}}},
+      {fieldFilter:{field:{fieldPath:'fecha'},op:'LESS_THAN_OR_EQUAL',value:{stringValue:String(hasta)}}}
+    ]}} } };
+    var ctrl=(typeof AbortController!=='undefined')?new AbortController():null;
+    var tm=setTimeout(function(){ if(ctrl)ctrl.abort(); }, 25000);
+    fetch(FB_RUNQUERY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:ctrl?ctrl.signal:undefined})
+      .then(function(r){ clearTimeout(tm); return r.json(); })
+      .then(function(j){ var out=[]; if(Array.isArray(j)) j.forEach(function(x){ if(x && x.document) out.push(x.document); }); cb(out); })
+      .catch(function(){ clearTimeout(tm); cb(null); });
+  }catch(e){ cb(null); }
+}
+
+// Lee de Firebase y DEVUELVE las filas en el MISMO orden de columnas que Sheets,
+// para que los convertidores del dashboard funcionen sin cambios.
+function fbRead(params, cb){
+  var acc=params.accion;
+  var desde=params.desde||params.fecha||'', hasta=params.hasta||params.fecha||desde;
+  var proms=String(params.promotoras||'').split(',').map(function(s){return s.trim().toUpperCase();}).filter(Boolean);
+  var inP=function(u){ return !proms.length || proms.indexOf(String(u||'').trim().toUpperCase())>=0; };
+  var coll = acc==='listar_marcaciones'?'marcaciones':(acc==='listar_equipo'?'ventas':'stock');
+  fbRunQuery(coll, desde, hasta, function(docs){
+    if(!docs){ cb(null); return; }   // error → el router cae a Sheets
+    var filas=[];
+    docs.forEach(function(d){
+      var u=_fvD(d,'usuario'); if(!inP(u)) return;
+      if(coll==='marcaciones'){
+        filas.push([ _fvD(d,'id'), _fvD(d,'fecha'), _fvD(d,'hora'), '', 0, '', u, _fvD(d,'tipo'), _fvD(d,'dist'), _fvD(d,'vendedor'), _fvD(d,'lat'), _fvD(d,'lng'), _fvD(d,'ubic'), _fvD(d,'bateria'), _fvD(d,'fotoURL') ]);
+      } else if(coll==='ventas'){
+        filas.push([ _fvD(d,'id'),'',_fvD(d,'fecha'),_fvD(d,'hora'),u,_fvD(d,'dist'),_fvD(d,'mesa'),_fvD(d,'vendedor'),_fvD(d,'pdv'),_fvD(d,'ruc'),_fvD(d,'direccion'),_fvD(d,'distrito'),_fvD(d,'provincia'),_fvD(d,'departamento'),_fvD(d,'giro'),_fvD(d,'subgiro'),_fvD(d,'pedido'),_fvD(d,'ean'),_fvD(d,'prod'),_fvD(d,'marca'),_fvD(d,'cantidad'),_fvD(d,'um'),_fvD(d,'precioUnit'),_fvD(d,'subtotal'),_fvD(d,'total'),_fvD(d,'causal'),_fvD(d,'causalDet'),_fvD(d,'obs') ]);
+      } else {
+        filas.push([ _fvD(d,'id'),_fvD(d,'fecha'),_fvD(d,'hora'),u,_fvD(d,'dist'),_fvD(d,'ean'),_fvD(d,'prod'),_fvD(d,'marca'),_fvD(d,'cat'),_fvD(d,'top'),_fvD(d,'unidades') ]);
+      }
+    });
+    cb({status:'ok', filas:filas});
+  });
+}
+
+// Router: si la fuente es Firebase y es una de las 3 lecturas, usa Firebase (con respaldo a Sheets).
+function gasGetReal(params, callback){
+  if(getFuente()==='firebase' && params && (params.accion==='listar_marcaciones'||params.accion==='listar_equipo'||params.accion==='listar_stock')){
+    fbRead(params, function(res){ if(res) callback(res); else _gasGetSheets(params, callback); });
+    return;
+  }
+  _gasGetSheets(params, callback);
+}
+try{ setTimeout(pintarFuente, 0); }catch(e){}
 
 // Normalizar fecha que viene del GAS a formato YYYY-MM-DD
 // Acepta: "2026-06-15", "15/06/2026", "Date object serializado", "2026-06-15T00:00:00.000Z", etc.
