@@ -63,10 +63,46 @@ button{font-family:inherit;cursor:pointer}
 .rec-bar .x{margin-left:auto;background:rgba(255,255,255,.14);border:none;color:#fff;font-size:12px;font-weight:600;padding:6px 12px;border-radius:8px;cursor:pointer}
 .empty{padding:40px 18px;text-align:center;color:var(--t3);font-size:13px;line-height:1.7}
 .empty .ic{font-size:36px;display:block;margin-bottom:8px}
+/* ══════════════════════════════════════════════════════
+   FORMATO TELÉFONO (vertical)
+   Partir la pantalla entre mapa y lista deja las dos
+   inservibles. En teléfono se muestra UNA a pantalla
+   completa y se alterna con el conmutador de arriba.
+   ══════════════════════════════════════════════════════ */
+.vtog{display:none}
 @media(max-width:720px){
+  /* Todo en UNA fila: si envuelve, se come media pantalla */
+  .top{padding:9px 11px;gap:7px;flex-wrap:nowrap}
+  .top .brand{font-size:14.5px;white-space:nowrap}
+  .top .who{font-size:11px;margin-left:auto;max-width:30%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:1}
+  .top .out{padding:8px 11px;min-height:38px;margin-left:7px;flex-shrink:0}
+  /* El punto verde basta como señal de "en vivo"; el texto no cabe */
+  .live-pill{font-size:0;padding:6px;gap:0;flex-shrink:0}
+  .live-pill .dot{width:11px;height:11px}
+
+  /* Conmutador Lista / Mapa */
+  .vtog{display:flex;gap:6px;background:#E2E8F0;padding:5px;margin:0;flex-shrink:0}
+  .vtog button{flex:1;min-height:44px;border:none;border-radius:9px;background:transparent;
+    font-family:inherit;font-size:13.5px;font-weight:800;color:#475569;cursor:pointer}
+  .vtog button.on{background:#fff;color:#0F172A;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+
   .main{flex-direction:column}
-  .list{width:100%;max-width:none;max-height:36vh;border-right:none;border-top:1px solid var(--line);order:2}
-  #map{order:1}
+  .list{width:100%;max-width:none;max-height:none;flex:1;border-right:none;overflow-y:auto}
+  .map-wrap{flex:1;min-height:0}
+
+  /* Una vista a la vez */
+  body.v-lista .map-wrap{display:none}
+  body.v-mapa  .list{display:none}
+
+  /* Filas de la lista más cómodas para el dedo */
+  .it{padding:14px;gap:12px;min-height:64px}
+  .it .av{width:40px;height:40px;font-size:13px}
+  .it .nm{font-size:14.5px}
+  .it .sub{font-size:12px}
+  .it .ago{font-size:11.5px;padding:5px 10px}
+  .list-h{padding:13px 14px;font-size:13.5px}
+  .rec-bar{flex-wrap:wrap;padding:10px 12px}
+  .rec-bar .x{min-height:40px;padding:9px 14px}
 }
 </style>
 </head>
@@ -95,6 +131,10 @@ button{font-family:inherit;cursor:pointer}
     <button class="out" onclick="logout()">Salir</button>
   </div>
   <div class="status" id="status"></div>
+  <div class="vtog" id="vtog">
+    <button id="vt-lista" class="on" onclick="setVista('lista')">👥 Personal</button>
+    <button id="vt-mapa"  onclick="setVista('mapa')">🗺️ Mapa</button>
+  </div>
   <div class="main">
     <div class="list">
       <div class="list-h" id="list-h">Equipo</div>
@@ -120,10 +160,10 @@ var MAPBOX_TOKEN='';
 
 var LOGIN={
   'JEFECANAL'  :{pass:'JEFE123$', nombre:'Sebastian Pereyra', equipo:'TODOS'},
-  'SUPLIMA'    :{pass:'SUPER123$',nombre:'Supervisor Lima',    equipo:['PROMLIM1','PROMLIM3','PROMLIM5','PROMLIM6']},
-  'SUPAREQUIPA':{pass:'SUPER123$',nombre:'Supervisor Arequipa',equipo:['PROMICA','PROMAQP','PROMCUS','PROMTAC']},
-  'SUPHUANCAYO':{pass:'SUPER123$',nombre:'Supervisor Huancayo',equipo:['PROMTPP','PROMHYO']},
-  'SUPPIURA'   :{pass:'SUPER123$',nombre:'Supervisor Piura',   equipo:['PROMTRUX','PROMCIX','PROMPIU']},
+  'SUPLIMA'    :{pass:'SUPER123$',nombre:'Alberto Silva',    equipo:['PROMLIM1','PROMLIM3','PROMLIM5','PROMLIM6']},
+  'SUPAREQUIPA':{pass:'SUPER123$',nombre:'Diana Gamero',equipo:['PROMICA','PROMAQP','PROMCUS','PROMTAC']},
+  'SUPHUANCAYO':{pass:'SUPER123$',nombre:'Gabriela Ymaña',equipo:['PROMTPP','PROMHYO']},
+  'SUPPIURA'   :{pass:'SUPER123$',nombre:'Roberto Arica',   equipo:['PROMTRUX','PROMCIX','PROMPIU']},
   'USUARIOPRUEBA':{pass:'SUPER123$',nombre:'Usuario Prueba',   equipo:['PROMTEST']}
 };
 var TODAS=['PROMLIM1','PROMLIM3','PROMLIM5','PROMLIM6','PROMAQP','PROMCUS','PROMTAC','PROMHYO','PROMTPP','PROMCIX','PROMTRUX','PROMICA','PROMPIU'];
@@ -144,9 +184,11 @@ function doLogin(){
   var eq=(LOGIN[u].equipo==='TODOS')?TODAS.slice():LOGIN[u].equipo.slice();
   SESION={user:u,nombre:LOGIN[u].nombre,equipo:eq};
   try{localStorage.setItem('aspery_envivo',JSON.stringify(SESION));}catch(x){}
+  // Sesión compartida: si luego abre el dashboard, tampoco le pedirá usuario
+  try{localStorage.setItem('aspery_sso',JSON.stringify({user:u,nombre:LOGIN[u].nombre,t:Date.now()}));}catch(x){}
   entrar();
 }
-function logout(){try{localStorage.removeItem('aspery_envivo');}catch(x){} if(_unsub){_unsub();_unsub=null;} if(_tick){clearInterval(_tick);_tick=null;} location.reload();}
+function logout(){try{localStorage.removeItem('aspery_envivo');localStorage.removeItem('aspery_sso');}catch(x){} if(_unsub){_unsub();_unsub=null;} if(_tick){clearInterval(_tick);_tick=null;} location.reload();}
 
 function entrar(){
   document.getElementById('login').style.display='none';
@@ -259,6 +301,7 @@ function snapToRoads(latlngs,cb){
 }
 var _recCapa=null, _recUser=null;
 function verRecorrido(u){
+  setVista('mapa');          // en teléfono: el recorrido se ve en el mapa
   _recUser=u;
   if(!_recCapa) _recCapa=L.layerGroup().addTo(_map);
   _recCapa.clearLayers();
@@ -319,10 +362,60 @@ function dibujarRecorrido(u,trail){
   pintar(tr);                                   // recta primero
   snapToRoads(tr,function(res){ pintar(res); }); // luego pegada a calles
 }
+// ── Conmutador de vista en teléfono ──
+function setVista(v){
+  try{
+    document.body.classList.remove('v-lista','v-mapa');
+    document.body.classList.add(v==='mapa'?'v-mapa':'v-lista');
+    var a=document.getElementById('vt-lista'), b=document.getElementById('vt-mapa');
+    if(a) a.className = (v==='mapa'?'':'on');
+    if(b) b.className = (v==='mapa'?'on':'');
+    if(v==='mapa' && _map) setTimeout(function(){ try{ _map.invalidateSize(); }catch(e){} }, 120);
+  }catch(e){}
+}
+// Arranca en la lista: lo primero que un supervisor quiere ver es quién está activo
+try{ document.body.classList.add('v-lista'); }catch(e){}
+
 function cerrarRecorrido(){ _recUser=null; if(_recCapa) _recCapa.clearLayers(); document.getElementById('rec-bar').style.display='none'; }
 
-// reanudar sesión
-(function(){ try{ var s=localStorage.getItem('aspery_envivo'); if(s){ var o=JSON.parse(s); if(o&&o.user&&LOGIN[o.user]){ SESION=o; entrar(); } } }catch(x){} })();
+// Reanudar sesión. Primero la propia; si no hay, la compartida con el
+// dashboard de Control y Seguimiento (así no pide usuario dos veces).
+(function(){
+  try{
+    var s=localStorage.getItem('aspery_envivo');
+    if(s){ var o=JSON.parse(s); if(o&&o.user&&LOGIN[o.user]){ SESION=o; entrar(); return; } }
+  }catch(x){}
+  try{
+    var q=JSON.parse(localStorage.getItem('aspery_sso')||'null');
+    if(!q || !q.user) return;
+    if(!q.t || (Date.now()-q.t) > 12*3600000){ localStorage.removeItem('aspery_sso'); return; }
+    var u=String(q.user).toUpperCase();
+    if(!LOGIN[u]) return;                       // usuario que aquí no existe → pedir login
+    var eq = (LOGIN[u].equipo==='TODOS') ? TODAS.slice() : LOGIN[u].equipo.slice();
+    SESION={user:u, nombre:LOGIN[u].nombre, equipo:eq};
+    localStorage.setItem('aspery_envivo',JSON.stringify(SESION));
+    entrar();
+  }catch(x){}
+})();
+
+// Si llegamos desde el dashboard con ?u=PROMOTORA, abrir su recorrido solo
+(function(){
+  try{
+    var m = location.search.match(/[?&]u=([^&]+)/);
+    if(!m) return;
+    var u = decodeURIComponent(m[1]).trim().toUpperCase();
+    if(!u) return;
+    var intentos = 0;
+    var t = setInterval(function(){
+      intentos++;
+      if(intentos > 40){ clearInterval(t); return; }          // ~12 s y se rinde
+      if(typeof SESION==='undefined' || !SESION || !SESION.user) return;  // aún sin sesión
+      if(typeof _map==='undefined' || !_map) return;          // mapa aún no listo
+      clearInterval(t);
+      try{ verRecorrido(u); }catch(e){}
+    }, 300);
+  }catch(e){}
+})();
 </script>
 </body>
 </html>

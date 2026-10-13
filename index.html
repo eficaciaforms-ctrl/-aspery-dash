@@ -252,8 +252,9 @@ button{font-family:inherit;}
 .mk-row b{color:var(--text);font-weight:700}
 .mk-btn{display:block;width:100%;margin-top:11px;border:none;border-radius:9px;padding:9px;background:var(--blue);color:#fff;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit}
 .mk-btn:hover{background:#0284C7}
-.mk-anul{border:none;border-radius:6px;padding:2px 8px;background:#FEE2E2;color:#B91C1C;font-weight:700;font-size:10.5px;cursor:pointer;font-family:inherit;margin-left:6px}
-.mk-anul:hover{background:#FCA5A5;color:#7F1D1D}
+.mk-anul{border:1.5px solid #FCA5A5;border-radius:8px;padding:6px 12px;background:#FEF2F2;color:#B91C1C;font-weight:800;font-size:12.5px;line-height:1.1;cursor:pointer;font-family:inherit;margin-left:10px;white-space:nowrap;vertical-align:middle;transition:.12s}
+.mk-anul:hover{background:#DC2626;border-color:#DC2626;color:#fff}
+.mk-anul:active{transform:scale(.96)}
 .tbl .anul-td{white-space:nowrap}
 .mk-card{transition:transform .12s ease, box-shadow .12s ease}
 .mk-card.ok{cursor:pointer}
@@ -352,6 +353,107 @@ button{font-family:inherit;}
 .auto-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#059669;background:#ECFDF5;border:1px solid #A7F3D0;padding:5px 11px;border-radius:20px;font-weight:600;margin-right:8px;white-space:nowrap}
 .auto-dot{width:7px;height:7px;border-radius:50%;background:#059669;display:inline-block;animation:autopulse 1.6s ease-in-out infinite}
 @keyframes autopulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+
+.filt-tira{display:none}
+.t-corto{display:none}
+
+/* ══════════════════════════════════════════════════════════
+   FORMATO TELÉFONO (vertical)
+   La barra lateral pasa a ser barra INFERIOR, como una app.
+   Nada de posiciones pegadas que se solapen, y todo lo que
+   se toca mide al menos 44px.
+   ══════════════════════════════════════════════════════════ */
+@media (max-width:768px){
+  /* ── Barra lateral → barra inferior ── */
+  .side{
+    left:0;right:0;top:auto;bottom:0;width:100%!important;height:64px;
+    flex-direction:row;align-items:stretch;padding:0;
+    background:linear-gradient(180deg,#0F172A,#083D5C);
+    box-shadow:0 -4px 18px rgba(2,6,23,.3);
+    overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  .side:hover,.side.open{width:100%!important}
+  .side-burger,.side-logo,.side-foot{display:none!important}
+  .side-item{
+    flex:1 0 auto;min-width:76px;flex-direction:column;justify-content:center;
+    gap:3px;padding:8px 6px;border-left:none!important;border-top:3px solid transparent;
+  }
+  .side-item .ic{font-size:21px;width:auto}
+  .side-item .lb{opacity:1!important;font-size:10.5px;font-weight:700;line-height:1.1;text-align:center}
+  .side-item.on{border-top-color:#38BDF8;background:rgba(56,189,248,.16)}
+  .dash{margin-left:0!important;padding-bottom:78px}
+
+  /* ── Nada pegado salvo la cabecera: así no se solapan ── */
+  .topbar{position:sticky;top:0;padding:9px 12px;gap:8px;flex-wrap:wrap}
+  .filters{position:static!important;top:auto!important;padding:10px 12px}
+  .tabs{position:static!important;top:auto!important;padding:0 8px}
+  .tab{flex-shrink:0;padding:13px 14px;font-size:13px}
+
+  /* ── Cabecera: UNA sola fila (antes ocupaba 149px, un tercio de pantalla) ── */
+  .topbar{flex-wrap:nowrap!important}
+  .topbar-r{gap:6px;flex-wrap:nowrap;justify-content:flex-end;flex-shrink:0}
+  .topbar-l{min-width:0;flex-shrink:1}
+  .topbar-name{max-width:84px;font-size:12px}
+  .auto-chip{display:none!important}          /* el "actualizado hace Xs" no cabe */
+  .solo-pc{display:none!important}            /* config del GAS: se hace en la PC */
+  .btn-icon{width:36px;height:36px;min-width:36px;font-size:15px}
+  .btn-txt{width:auto!important;min-width:0!important;border-radius:10px!important;
+           padding:0 9px!important;font-size:11.5px!important;height:36px;white-space:nowrap}
+  .t-largo{display:none}
+  .t-corto{display:inline}
+  .topbar-av{width:34px;height:34px;font-size:12.5px}
+
+  /* ── Filtros plegados: el supervisor entra directo al dato ── */
+  .filt-tira{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:#fff;border-bottom:1px solid var(--border);padding:13px 14px;
+    font-size:13px;font-weight:700;color:var(--text);cursor:pointer;min-height:48px
+  }
+  .filt-tira .ft-chev{color:var(--t3);font-size:15px}
+  .filters{display:none!important}
+  body.filt-open .filters{display:flex!important}
+
+  /* ── Filtros: dos por fila, dedo-friendly ── */
+  .filt-sel,.filters input[type=date],.filters select{
+    min-height:44px;font-size:13.5px;flex:1 1 46%;min-width:0
+  }
+  .rango-btns{flex-wrap:wrap;gap:6px;width:100%}
+  .rango-btns button{flex:1 1 30%;min-height:40px;font-size:12.5px}
+
+  /* ── Tablas: scroll horizontal propio, sin romper la tarjeta ── */
+  .sec:has(.tbl){overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .tbl{min-width:580px}
+
+  /* ── El evolutivo: se desliza para que no quede diminuto ── */
+  #tnd-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  #tnd-svg{min-width:640px}
+
+  /* ── Botones de acción, cómodos para el pulgar ── */
+  .mk-anul{padding:9px 14px;font-size:13px;margin-left:0;margin-top:6px;display:inline-block}
+  .mk-btn{padding:13px;font-size:13.5px}
+  .apro-btns{flex-direction:column}
+  .apro-btns button{width:100%;min-height:48px}
+
+  /* ── Tarjetas y textos: compactar para que quepa más dato por pantalla ── */
+  .sec{padding:14px}
+  .hero{padding:15px 16px}
+  .hero-amount{font-size:27px}
+  .hero-narr{font-size:12.5px;line-height:1.5}
+  .hero-lbl{font-size:10.5px}
+  .kpis{grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+  .kpi{padding:11px 12px}
+  .kpi-lbl{font-size:10px;margin-bottom:3px;letter-spacing:.3px}
+  .kpi-val{font-size:18px}
+  /* El banner ocupaba 92px en dos líneas; una sola basta */
+  .demo-banner{font-size:10.5px;padding:6px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+}
+@media (max-width:420px){
+  .side-item{min-width:68px}
+  .side-item .lb{font-size:9.5px}
+  .kpis{grid-template-columns:1fr 1fr}
+  .topbar-name{max-width:106px}
+}
 </style>
 </head>
 <body>
@@ -395,15 +497,20 @@ button{font-family:inherit;}
     </div>
     <div class="topbar-r">
       <span id="auto-chip" class="auto-chip"><span class="auto-dot"></span> Actualizado hace 0s</span>
-      <a class="btn-icon" href="en-vivo.html" title="Seguimiento en vivo: ubicación y recorrido de las promotoras" style="width:auto;padding:0 12px;font-size:12px;font-weight:700;text-decoration:none;background:#0EA5F9;color:#fff;display:inline-flex;align-items:center;gap:6px">🛰️ En vivo</a>
-      <button class="btn-icon" id="btn-fuente" onclick="toggleFuente()" title="Fuente de datos: Sheets o Firebase" style="width:auto;padding:0 10px;font-size:12px;font-weight:600">Datos: Sheets</button>
+      <a class="btn-icon btn-txt" id="btn-envivo" href="en-vivo.html" title="Seguimiento en vivo: ubicación y recorrido de las promotoras" style="width:auto;padding:0 12px;font-size:12px;font-weight:700;text-decoration:none;background:#0EA5F9;color:#fff;display:inline-flex;align-items:center;gap:6px">🛰️<span class="t-largo"> En vivo</span><span class="t-corto">Vivo</span></a>
+      <button class="btn-icon btn-txt" id="btn-fuente" onclick="toggleFuente()" title="Fuente de datos: Sheets o Firebase" style="width:auto;padding:0 10px;font-size:12px;font-weight:600;background:#16A34A;color:#fff">Datos: Firebase ⚡</button>
       <button class="btn-icon" onclick="recargar()" title="Recargar ahora">↻</button>
-      <button class="btn-icon" onclick="abrirConfigURL()" title="Configurar conexión GAS">⚙</button>
+      <button class="btn-icon solo-pc" onclick="abrirConfigURL()" title="Configurar conexión GAS">⚙</button>
       <button class="btn-icon" onclick="logout()" title="Cerrar sesión">⎋</button>
     </div>
   </div>
 
   <!-- FILTROS -->
+  <!-- Tira plegable de filtros: en teléfono los filtros ocupaban media pantalla -->
+  <div class="filt-tira" id="filt-tira" onclick="toggleFiltros()">
+    <span class="ft-txt" id="ft-txt">📅 Filtros</span>
+    <span class="ft-chev" id="ft-chev">▾</span>
+  </div>
   <div class="filters" id="filters"></div>
 
   <!-- TABS -->
@@ -794,8 +901,6 @@ var TABS_CONFIG = [
   {id:"geo", lbl:"Geográfico", ico:"📍"},
   {id:"asistencia", lbl:"Días relevados", ico:"✅"},
   {id:"marcaciones", lbl:"Marcaciones", ico:"📍"},
-  {id:"mapageneral", lbl:"Mapa general", ico:"🌎"},
-  {id:"statusday", lbl:"Status Day", ico:"🗺️"},
   {id:"conclusiones", lbl:"Conclusiones", ico:"📝"},
   {id:"apro_relevos", lbl:"Relevos", ico:"✋"},
   {id:"apro_marcas", lbl:"Marcaciones", ico:"🔄"},
@@ -845,6 +950,14 @@ function fmtFecha(f){if(!f)return'';var p=f.split('-');var dias=['Dom','Lun','Ma
 window.addEventListener('load', function(){
   document.getElementById('lg-pass').addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
   var saved = sessionStorage.getItem('dash_sesion');
+  if (!saved) {                               // ¿hay sesión abierta en "En vivo"?
+    var sso = ssoLeer();
+    if (sso && USERS[sso.user]) {
+      saved = JSON.stringify({ user:sso.user, role:USERS[sso.user].role,
+                               nombre:USERS[sso.user].nombre, zona:USERS[sso.user].zona });
+      sessionStorage.setItem('dash_sesion', saved);
+    }
+  }
   if (saved) {
     try {
       SESION = JSON.parse(saved);
@@ -854,6 +967,46 @@ window.addEventListener('load', function(){
     } catch(e){}
   }
 });
+
+// ════════════════════════════════════════════════════════
+// SESIÓN COMPARTIDA entre el dashboard y la página "En vivo".
+// Se guarda en localStorage (sessionStorage no se comparte entre pestañas).
+// Vence a las 12 h para que un navegador olvidado no quede abierto.
+// ════════════════════════════════════════════════════════
+var SSO_KEY='aspery_sso', SSO_HORAS=12;
+function ssoGuardar(ses){
+  try{ localStorage.setItem(SSO_KEY, JSON.stringify({user:ses.user, nombre:ses.nombre, role:ses.role, t:Date.now()})); }catch(e){}
+}
+function ssoLeer(){
+  try{
+    var o=JSON.parse(localStorage.getItem(SSO_KEY)||'null');
+    if(!o || !o.user) return null;
+    if(!o.t || (Date.now()-o.t) > SSO_HORAS*3600000){ ssoBorrar(); return null; }
+    return o;
+  }catch(e){ return null; }
+}
+function ssoBorrar(){ try{ localStorage.removeItem(SSO_KEY); localStorage.removeItem('aspery_envivo'); }catch(e){} }
+
+// ── Filtros plegables en teléfono ──
+function toggleFiltros(){
+  document.body.classList.toggle('filt-open');
+  var c=document.getElementById('ft-chev');
+  if(c) c.textContent = document.body.classList.contains('filt-open') ? '▴' : '▾';
+}
+// Muestra en la tira el rango y los filtros activos, para no tener que abrirla
+function pintarTiraFiltros(){
+  var t=document.getElementById('ft-txt'); if(!t) return;
+  var partes=[];
+  try{
+    if(FECHA_DESDE && FECHA_HASTA){
+      partes.push(FECHA_DESDE===FECHA_HASTA ? fmtFecha(FECHA_DESDE) : (fmtFecha(FECHA_DESDE)+' – '+fmtFecha(FECHA_HASTA)));
+    }
+    if(FILTROS.promotora) partes.push(FILTROS.promotora);
+    else if(FILTROS.supervisor) partes.push(FILTROS.supervisor);
+    if(FILTROS.departamento) partes.push(FILTROS.departamento);
+  }catch(e){}
+  t.textContent = '📅 ' + (partes.length ? partes.join(' · ') : 'Filtros');
+}
 
 function doLogin() {
   var u = document.getElementById('lg-user').value.trim().toUpperCase();
@@ -868,6 +1021,7 @@ function doLogin() {
   sessionStorage.setItem('dash_sesion', JSON.stringify(SESION));
   sessionStorage.setItem('dash_fecha_desde', FECHA_DESDE);
   sessionStorage.setItem('dash_fecha_hasta', FECHA_HASTA);
+  ssoGuardar(SESION);          // para que "En vivo" no vuelva a pedir usuario
   iniciarDash();
 }
 function showErr(msg){var err=document.getElementById('login-err');err.textContent=msg;err.style.display='block';}
@@ -876,6 +1030,7 @@ function logout(){
   sessionStorage.removeItem('dash_sesion');
   sessionStorage.removeItem('dash_fecha_desde');
   sessionStorage.removeItem('dash_fecha_hasta');
+  ssoBorrar();
   SESION=null;
   document.getElementById('screen-dash').classList.remove('on');
   document.getElementById('screen-login').style.display='flex';
@@ -918,7 +1073,7 @@ function renderTabs() {
 var MODULOS = [
   {id:'ventas',       ico:'📊', lbl:'Ventas',       tabs:['resumen','causales','productos']},
   {id:'stock',        ico:'📦', lbl:'Stock',        tabs:['stock_det','stock_res']},
-  {id:'personal',     ico:'👣', lbl:'Personal',     tabs:['mapageneral','marcaciones','statusday','asistencia']},
+  {id:'personal',     ico:'👣', lbl:'Personal',     tabs:['marcaciones','asistencia']},
   {id:'geografia',    ico:'📍', lbl:'Geografía',    tabs:['geo']},
   {id:'conclusiones', ico:'📝', lbl:'Conclusiones', tabs:['conclusiones']},
   {id:'aprobaciones', ico:'✋', lbl:'Aprobaciones', tabs:['apro_relevos','apro_marcas']},
@@ -1165,14 +1320,62 @@ var FB_PROJECT_D='aspery-8780d';
 var FB_KEY_D='AIzaSyCabjIjVRCXb_BlNTXi_QHQw9yNhBV6IIE';
 var FB_RUNQUERY='https://firestore.googleapis.com/v1/projects/'+FB_PROJECT_D+'/databases/(default)/documents:runQuery?key='+FB_KEY_D;
 
-function getFuente(){ try{ return localStorage.getItem('dash_fuente')==='firebase'?'firebase':'sheets'; }catch(e){ return 'sheets'; } }
-function setFuente(f){ try{ localStorage.setItem('dash_fuente', f); }catch(e){} }
-function pintarFuente(){ var b=document.getElementById('btn-fuente'); if(b){ var f=getFuente(); b.textContent='Datos: '+(f==='firebase'?'Firebase ⚡':'Sheets'); b.style.background=(f==='firebase'?'#16A34A':''); b.style.color='#fff'; } }
+// Firebase es la fuente PRINCIPAL. Sheets queda como respaldo y para el histórico.
+// (clave v2: así el nuevo valor por defecto aplica aunque antes se hubiera elegido Sheets)
+function getFuente(){ try{ return localStorage.getItem('dash_fuente_v2')==='sheets'?'sheets':'firebase'; }catch(e){ return 'firebase'; } }
+function setFuente(f){ try{ localStorage.setItem('dash_fuente_v2', f); }catch(e){} }
+
+var _servido='';   // qué fuente atendió realmente el rango actual
+function pintarFuente(){
+  var b=document.getElementById('btn-fuente'); if(!b) return;
+  var f=getFuente();
+  var corto = (window.innerWidth||999) <= 768;   // en teléfono no cabe el texto largo
+  if(f==='sheets'){
+    b.textContent = corto ? 'GS' : 'Datos: Sheets'; b.style.background=''; b.style.color='#fff';
+    b.title='Fuente fijada en Google Sheets. Toca para usar Firebase (más rápido).';
+  } else if(_servido==='sheets'){
+    b.textContent = corto ? 'GS⏳' : 'Datos: Sheets (histórico)'; b.style.background='#D97706'; b.style.color='#fff';
+    b.title='Firebase está activo, pero este rango incluye fechas anteriores a las que Firebase tiene guardadas, así que se leyó de Sheets para no mostrarte datos incompletos.';
+  } else {
+    b.textContent = corto ? '⚡FB' : 'Datos: Firebase ⚡'; b.style.background='#16A34A'; b.style.color='#fff';
+    b.title='Firebase (principal). Si pides fechas más antiguas, cae a Sheets automáticamente.';
+  }
+}
 function toggleFuente(){
-  var f=getFuente()==='firebase'?'sheets':'firebase'; setFuente(f); pintarFuente(); _gasCache={};
-  if(f==='firebase') alert('Fuente cambiada a FIREBASE ⚡ (más rápido).\n\nNota: los datos completos en Firebase existen desde que el APK #26 empezó a escribir. Para fechas anteriores, usa Sheets.');
-  else alert('Fuente cambiada a Google Sheets (la de siempre).');
+  var f=getFuente()==='firebase'?'sheets':'firebase'; setFuente(f); _servido=''; pintarFuente(); _gasCache={};
+  if(f==='sheets') alert('Fuente fijada en GOOGLE SHEETS.\n\nMás lento, pero con todo el histórico.');
+  else alert('Fuente fijada en FIREBASE ⚡ (principal).\n\nSi pides fechas anteriores a las que Firebase tiene, el dashboard usa Sheets solo para ese rango, automáticamente.');
   if(typeof recargar==='function') recargar();
+}
+
+// ── Desde qué fecha hay datos en Firebase. Se detecta UNA vez y se recuerda,
+//    así no hay que configurar nada a mano ni gastar lecturas de más.
+var _fbMin=null, _fbEsperando=[];
+function fbMinFecha(cb){
+  if(_fbMin!==null){ cb(_fbMin); return; }
+  // La caché vence a las 12 h: así, después de migrar histórico, el dashboard
+  // se entera solo de que Firebase ya cubre fechas más antiguas.
+  try{
+    var c=localStorage.getItem('dash_fb_min'), t=parseInt(localStorage.getItem('dash_fb_min_t')||0,10);
+    if(c && t && (Date.now()-t) < 43200000){ _fbMin=c; cb(_fbMin); return; }
+  }catch(e){}
+  _fbEsperando.push(cb);
+  if(_fbEsperando.length>1) return;            // ya hay una consulta en vuelo
+  function responder(v){
+    _fbMin=v; try{ if(v){ localStorage.setItem('dash_fb_min',v); localStorage.setItem('dash_fb_min_t',String(Date.now())); } }catch(e){}
+    var w=_fbEsperando; _fbEsperando=[]; w.forEach(function(fn){ fn(v); });
+  }
+  try{
+    var body={ structuredQuery:{ from:[{collectionId:'ventas'}],
+      orderBy:[{field:{fieldPath:'fecha'},direction:'ASCENDING'}], limit:1 } };
+    var ctrl=(typeof AbortController!=='undefined')?new AbortController():null;
+    var tm=setTimeout(function(){ if(ctrl)ctrl.abort(); },15000);
+    fetch(FB_RUNQUERY,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(body),signal:ctrl?ctrl.signal:undefined})
+      .then(function(r){ clearTimeout(tm); return r.json(); })
+      .then(function(j){ var f=''; if(Array.isArray(j)) j.forEach(function(x){ if(x&&x.document){ var v=_fvD(x.document,'fecha'); if(v) f=String(v); } }); responder(f||''); })
+      .catch(function(){ clearTimeout(tm); responder(''); });
+  }catch(e){ responder(''); }
 }
 
 // Lee un campo de un documento Firestore (stringValue / doubleValue / integerValue)
@@ -1207,6 +1410,7 @@ function fbRead(params, cb){
     docs.forEach(function(d){
       var u=_fvD(d,'usuario'); if(!inP(u)) return;
       if(coll==='marcaciones'){
+        if(String(_fvD(d,'anulada')||'').toUpperCase()==='SI') return;   // anulada: fuera de reportes
         filas.push([ _fvD(d,'id'), _fvD(d,'fecha'), _fvD(d,'hora'), '', 0, '', u, _fvD(d,'tipo'), _fvD(d,'dist'), _fvD(d,'vendedor'), _fvD(d,'lat'), _fvD(d,'lng'), _fvD(d,'ubic'), _fvD(d,'bateria'), _fvD(d,'fotoURL') ]);
       } else if(coll==='ventas'){
         filas.push([ _fvD(d,'id'),'',_fvD(d,'fecha'),_fvD(d,'hora'),u,_fvD(d,'dist'),_fvD(d,'mesa'),_fvD(d,'vendedor'),_fvD(d,'pdv'),_fvD(d,'ruc'),_fvD(d,'direccion'),_fvD(d,'distrito'),_fvD(d,'provincia'),_fvD(d,'departamento'),_fvD(d,'giro'),_fvD(d,'subgiro'),_fvD(d,'pedido'),_fvD(d,'ean'),_fvD(d,'prod'),_fvD(d,'marca'),_fvD(d,'cantidad'),_fvD(d,'um'),_fvD(d,'precioUnit'),_fvD(d,'subtotal'),_fvD(d,'total'),_fvD(d,'causal'),_fvD(d,'causalDet'),_fvD(d,'obs') ]);
@@ -1218,13 +1422,24 @@ function fbRead(params, cb){
   });
 }
 
-// Router: si la fuente es Firebase y es una de las 3 lecturas, usa Firebase (con respaldo a Sheets).
+// Router. Firebase es principal, pero SOLO si cubre todo el rango pedido:
+// si pides fechas anteriores a las que Firebase tiene guardadas, se usa Sheets
+// para ese rango. Así nunca ves un período a medias.
 function gasGetReal(params, callback){
-  if(getFuente()==='firebase' && params && (params.accion==='listar_marcaciones'||params.accion==='listar_equipo'||params.accion==='listar_stock')){
-    fbRead(params, function(res){ if(res) callback(res); else _gasGetSheets(params, callback); });
-    return;
-  }
-  _gasGetSheets(params, callback);
+  var esLectura = params && (params.accion==='listar_marcaciones'||params.accion==='listar_equipo'||params.accion==='listar_stock');
+  if(getFuente()!=='firebase' || !esLectura){ _gasGetSheets(params, callback); return; }
+
+  var desde = params.desde || params.fecha || '';
+  fbMinFecha(function(min){
+    if(!min || (desde && String(desde) < String(min))){
+      _servido='sheets'; pintarFuente();
+      _gasGetSheets(params, callback); return;      // histórico → Sheets (completo)
+    }
+    fbRead(params, function(res){
+      if(res){ _servido='firebase'; pintarFuente(); callback(res); }
+      else   { _servido='sheets';   pintarFuente(); _gasGetSheets(params, callback); }
+    });
+  });
 }
 try{ setTimeout(pintarFuente, 0); }catch(e){}
 
@@ -1987,7 +2202,13 @@ function generarMarcaDemo(dias){
   });
   return out;
 }
+// El recorrido y la ubicación viven en la página "En vivo".
+// Esta función queda como puente: abre esa página enfocando a la promotora.
 function irStatusDayDe(user){
+  try{ window.open('en-vivo.html?u='+encodeURIComponent(user), '_blank'); }catch(e){ location.href='en-vivo.html'; }
+  return;
+}
+function _irStatusDayDe_viejo(user){
   SD_USER=user; SD_FECHA=(FECHA_HASTA||hoy());
   setTab('statusday');
   sdCargar();
@@ -1996,7 +2217,7 @@ function irStatusDayDe(user){
 function btnAnular(m, etq){
   if(!m || !m.id) return '';
   if(!(SESION.role==='jefe' || SESION.role==='sup')) return '';
-  return '<button class="mk-anul" onclick="event.stopPropagation();anularMarca(\''+m.id+'\',\''+m.usuario+'\',\''+m.tipo+'\',\''+etq+'\')">Anular</button>';
+  return '<button class="mk-anul" onclick="event.stopPropagation();anularMarca(\''+m.id+'\',\''+m.usuario+'\',\''+m.tipo+'\',\''+etq+'\')">🚫 Anular</button>';
 }
 var _ANULANDO=false;
 function anularMarca(id, usuario, tipo, etq){
@@ -2009,6 +2230,9 @@ function anularMarca(id, usuario, tipo, etq){
     _ANULANDO=false;
     if(res && res.status==='ok'){
       try{ _gasCache={}; }catch(e){}
+      // La anulación se guarda en Sheets. Si el dashboard está leyendo de Firebase,
+      // hay que marcarla allá también o la marcación anulada seguiría apareciendo.
+      fbAnularMarca(id);
       alert('✓ Marcación anulada.\n\n'+usuario+' deberá volver a marcar su '+etq+'.');
       _marcaKey='';
       var proms = SESION.role==='jefe' ? TODOS_PROMS.slice() : (SUP_MAP[SESION.user]||[]);
@@ -2018,6 +2242,19 @@ function anularMarca(id, usuario, tipo, etq){
     }
   });
 }
+// Marca la marcación como anulada en Firebase (campo anulada:"SI").
+// No borra el documento: queda el rastro, pero deja de contarse en los reportes.
+function fbAnularMarca(id){
+  try{
+    if(!id) return;
+    var url='https://firestore.googleapis.com/v1/projects/'+FB_PROJECT_D+
+            '/databases/(default)/documents/marcaciones/'+encodeURIComponent(String(id))+
+            '?key='+FB_KEY_D+'&updateMask.fieldPaths=anulada';
+    fetch(url,{method:'PATCH',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({fields:{anulada:{stringValue:'SI'}}})}).catch(function(){});
+  }catch(e){}
+}
+
 function renderMarcaciones(){
   var data=marcaFiltrado().slice();
   var cont=document.getElementById('content');
@@ -2118,7 +2355,7 @@ function renderMarcaciones(){
       var foto=(r.foto && r.foto.indexOf('http')===0)?'<a href="'+r.foto+'" target="_blank" style="color:var(--blue)">Ver 📷</a>':'—';
       var alt=r.alterada?'<span class="bdg bdg-r">⚠ '+Math.abs(r.delta)+'s</span>':'<span class="bdg bdg-g">✓</span>';
       var etq = r.tipo==='FIN' ? 'fin de ruta' : (r.tipo==='CONVEND' ? 'inicio con vendedor' : 'inicio de ruta');
-      var tdAnul = puedeAnular ? ('<td class="anul-td"><button class="mk-anul" onclick="anularMarca(\''+r.id+'\',\''+r.usuario+'\',\''+r.tipo+'\',\''+etq+'\')">Anular</button></td>') : '';
+      var tdAnul = puedeAnular ? ('<td class="anul-td"><button class="mk-anul" onclick="anularMarca(\''+r.id+'\',\''+r.usuario+'\',\''+r.tipo+'\',\''+etq+'\')">🚫 Anular</button></td>') : '';
       html+='<tr><td><strong>'+r.usuario+'</strong></td><td>'+tb+'</td><td>'+fmtFecha(r.fecha)+'</td><td>'+(r.horaSrv||'—')+'</td><td>'+r.dist+'</td><td>'+r.vendedor+'</td><td>'+mapa+'</td><td class="r num">'+(r.bateria||'—')+'</td><td class="r">'+alt+'</td><td>'+foto+'</td>'+tdAnul+'</tr>';
     });
     html+='</tbody></table></div>';
@@ -2756,6 +2993,7 @@ function metricasSupervisor(data, sup) {
 // RENDER CONTENT
 // ════════════════════════════════════════════════════════
 function renderContent() {
+  try{ pintarTiraFiltros(); }catch(e){}
   if (TAB_ACTUAL === 'resumen') renderResumen();
   else if (TAB_ACTUAL === 'causales') renderCausales();
   else if (TAB_ACTUAL === 'productos') renderProductos();
@@ -2833,7 +3071,221 @@ function renderResumen() {
   }
 
   html += '</div>';
+
+  // Evolución diaria (línea de ventas + barras de cobertura)
+  html += renderTendencia(data);
+
   document.getElementById('content').innerHTML = html;
+  activarTendencia();
+}
+
+// ════════════════════════════════════════════════════════
+// EVOLUCIÓN DIARIA · línea de ventas + barras de cobertura
+// Dos paneles con el MISMO eje de días. No se usa eje doble:
+// soles y cantidad de puntos son escalas distintas y mezclarlas
+// en un solo eje distorsiona la lectura.
+// Respeta todos los filtros porque recibe dataFiltrada().
+// ════════════════════════════════════════════════════════
+var _TEND = [];
+
+function diasDelRango(){
+  var out=[], d=new Date(FECHA_DESDE+'T12:00:00'), f=new Date(FECHA_HASTA+'T12:00:00');
+  var guard=0;
+  while(d<=f && guard++<400){
+    out.push(d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2));
+    d.setDate(d.getDate()+1);
+  }
+  return out;
+}
+
+function datosPorDia(data){
+  var visitas={};
+  data.forEach(function(r){ visitas[r.id]=r; });
+  var porF={};
+  Object.keys(visitas).forEach(function(k){
+    var r=visitas[k]; if(!r.fecha) return;
+    if(!porF[r.fecha]) porF[r.fecha]={tot:0,vis:0,cv:0,ext:0};
+    var o=porF[r.fecha];
+    o.vis++; o.tot+=(r.total||0);
+    if(r.modo==='SI') o.cv++;
+    else if(CAUSALES_INFO[r.causal] && CAUSALES_INFO[r.causal].tipo==='externa') o.ext++;
+  });
+  return diasDelRango().map(function(f){
+    var o=porF[f]||{tot:0,vis:0,cv:0,ext:0};
+    return {fecha:f, tot:o.tot, vis:o.vis, cv:o.cv, neto:o.vis-o.ext};
+  }).filter(function(d){
+    // Los domingos no se trabajan: se excluyen para no falsear la tendencia.
+    // Excepción: si hubo actividad (relevo o recuperación) sí se muestra,
+    // así el gráfico siempre cuadra con los totales de arriba.
+    return !(_esDom(d.fecha) && d.vis===0 && d.tot===0);
+  });
+}
+
+function _nice(v){
+  if(v<=0) return 10;
+  var p=Math.pow(10,Math.floor(Math.log10(v))), n=v/p;
+  var m = n<=1?1 : n<=2?2 : n<=2.5?2.5 : n<=5?5 : 10;
+  return m*p;
+}
+function _diaSem(f){
+  var d=new Date(f+'T12:00:00');
+  return ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][d.getDay()];
+}
+function _esDom(f){ return new Date(f+'T12:00:00').getDay()===0; }
+
+function renderTendencia(data){
+  var dd = datosPorDia(data);
+  _TEND = dd;
+  if(!dd.length) return '';
+
+  var hayAlgo = dd.some(function(d){ return d.vis>0 || d.tot>0; });
+  if(!hayAlgo){
+    return '<div class="sec"><div class="sec-hdr"><div class="sec-ttl"><div class="sec-ttl-ico">📉</div>Evolución diaria</div></div>'+
+           '<div style="padding:26px 18px;text-align:center;color:#94A3B8;font-size:13.5px">No hay registros en este rango con los filtros seleccionados.</div></div>';
+  }
+
+  // Geometría
+  var W=1000, ML=62, MR=16, PT=18;
+  var HL=150;            // panel línea (ventas)
+  var GAP=30;            // separación entre paneles
+  var HB=112;            // panel barras
+  var HX=34;             // eje de días
+  var H = PT+HL+GAP+HB+HX;
+  var IW = W-ML-MR;
+  var n = dd.length, paso = IW/n;
+
+  var maxTot=0, maxVis=0;
+  dd.forEach(function(d){ if(d.tot>maxTot) maxTot=d.tot; if(d.vis>maxVis) maxVis=d.vis; });
+  var topTot=_nice(maxTot), topVis=_nice(maxVis);
+
+  var yL0=PT+HL, yB0=PT+HL+GAP+HB;
+  var esc=function(v,t,h,base){ return base - (t>0? (v/t)*h : 0); };
+  var cx=function(i){ return ML + paso*i + paso/2; };
+
+  var s='';
+
+  // ── Banda de inicio de semana (lunes) para leer el ritmo semanal
+  dd.forEach(function(d,i){
+    if(new Date(d.fecha+'T12:00:00').getDay()===1)
+      s+='<rect x="'+(ML+paso*i)+'" y="'+PT+'" width="'+paso+'" height="'+(HL+GAP+HB)+'" fill="#F8FAFC"/>';
+  });
+
+  // ── Grid + eje Y del panel de ventas
+  for(var g=0; g<=4; g++){
+    var yv=yL0-(HL*g/4), val=topTot*g/4;
+    s+='<line x1="'+ML+'" y1="'+yv+'" x2="'+(W-MR)+'" y2="'+yv+'" stroke="#F1F5F9" stroke-width="1"/>';
+    s+='<text x="'+(ML-8)+'" y="'+(yv+4)+'" text-anchor="end" font-size="10.5" fill="#94A3B8">'+(val>=1000?Math.round(val/1000)+'k':Math.round(val))+'</text>';
+  }
+  s+='<text x="'+ML+'" y="'+(PT-5)+'" font-size="11.5" font-weight="700" fill="#475569">Ventas del día (S/)</text>';
+
+  // ── Área + línea de ventas
+  var pts=dd.map(function(d,i){ return cx(i)+','+esc(d.tot,topTot,HL,yL0); });
+  s+='<path d="M'+cx(0)+','+yL0+' L'+pts.join(' L')+' L'+cx(n-1)+','+yL0+' Z" fill="#0284C7" opacity=".07"/>';
+  s+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="#0284C7" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+
+  // Punto máximo con etiqueta directa (una sola, no en todos los puntos)
+  var iMax=0; dd.forEach(function(d,i){ if(d.tot>dd[iMax].tot) iMax=i; });
+  dd.forEach(function(d,i){
+    var yv=esc(d.tot,topTot,HL,yL0);
+    s+='<circle cx="'+cx(i)+'" cy="'+yv+'" r="'+(i===iMax?4.5:3)+'" fill="#0284C7" stroke="#fff" stroke-width="2"/>';
+  });
+  if(dd[iMax].tot>0){
+    var xm=cx(iMax), ym=esc(dd[iMax].tot,topTot,HL,yL0);
+    var anc = xm>W-170?'end':(xm<ML+70?'start':'middle');
+    // Si el pico queda alto, la etiqueta va DEBAJO del punto para no chocar con el título
+    var yLbl = (ym < PT+30) ? (ym+17) : (ym-11);
+    s+='<text x="'+xm+'" y="'+yLbl+'" text-anchor="'+anc+'" font-size="11.5" font-weight="800" fill="#0F172A" style="paint-order:stroke" stroke="#fff" stroke-width="3">S/ '+fmt(dd[iMax].tot)+'</text>';
+  }
+
+  // ── Panel de barras: cobertura
+  for(var g2=0; g2<=2; g2++){
+    var yb=yB0-(HB*g2/2), vb=topVis*g2/2;
+    s+='<line x1="'+ML+'" y1="'+yb+'" x2="'+(W-MR)+'" y2="'+yb+'" stroke="#F1F5F9" stroke-width="1"/>';
+    s+='<text x="'+(ML-8)+'" y="'+(yb+4)+'" text-anchor="end" font-size="10.5" fill="#94A3B8">'+Math.round(vb)+'</text>';
+  }
+  s+='<text x="'+ML+'" y="'+(yB0-HB-7)+'" font-size="11.5" font-weight="700" fill="#475569">Puntos de venta (cantidad)</text>';
+
+  // Barra de fondo = cobertura total; dentro, netos y con venta
+  var bw=Math.max(5, Math.min(30, paso*0.62));          // ancho barra fondo
+  var iw=Math.max(2, (bw-6)/2);                          // ancho barras internas (2px de aire)
+  dd.forEach(function(d,i){
+    var xc=cx(i), x0=xc-bw/2;
+    var hT=yB0-esc(d.vis ,topVis,HB,yB0);
+    var hN=yB0-esc(d.neto,topVis,HB,yB0);
+    var hC=yB0-esc(d.cv  ,topVis,HB,yB0);
+    if(hT>0) s+='<rect x="'+x0+'" y="'+(yB0-hT)+'" width="'+bw+'" height="'+hT+'" rx="3" fill="#E2E8F0"/>';
+    if(hN>0) s+='<rect x="'+(xc-iw-1)+'" y="'+(yB0-hN)+'" width="'+iw+'" height="'+hN+'" rx="2.5" fill="#0EA5F9"/>';
+    if(hC>0) s+='<rect x="'+(xc+1)+'"    y="'+(yB0-hC)+'" width="'+iw+'" height="'+hC+'" rx="2.5" fill="#16A34A"/>';
+  });
+  s+='<line x1="'+ML+'" y1="'+yB0+'" x2="'+(W-MR)+'" y2="'+yB0+'" stroke="#CBD5E1" stroke-width="1"/>';
+
+  // ── Eje de días (con día de semana)
+  var cada = n<=16?1 : (n<=32?2:Math.ceil(n/16));
+  dd.forEach(function(d,i){
+    if(i%cada) return;
+    var xc=cx(i), dia=d.fecha.slice(8,10);
+    s+='<text x="'+xc+'" y="'+(yB0+15)+'" text-anchor="middle" font-size="10" font-weight="700" fill="'+(_esDom(d.fecha)?'#DC2626':'#64748B')+'">'+_diaSem(d.fecha)+'</text>';
+    s+='<text x="'+xc+'" y="'+(yB0+27)+'" text-anchor="middle" font-size="9.5" fill="#94A3B8">'+dia+'</text>';
+  });
+
+  // ── Capa de hover (una banda por día)
+  dd.forEach(function(d,i){
+    s+='<rect class="tnd-hit" data-i="'+i+'" x="'+(ML+paso*i)+'" y="'+PT+'" width="'+paso+'" height="'+(HL+GAP+HB)+'" fill="transparent" style="cursor:pointer"/>';
+  });
+  s+='<line id="tnd-cross" x1="0" y1="'+PT+'" x2="0" y2="'+yB0+'" stroke="#0F172A" stroke-width="1" stroke-dasharray="3 3" opacity="0"/>';
+
+  var leg=function(c,t){ return '<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#475569"><span style="width:11px;height:11px;border-radius:3px;background:'+c+'"></span>'+t+'</span>'; };
+
+  return '<div class="sec">'+
+    '<div class="sec-hdr"><div class="sec-ttl"><div class="sec-ttl-ico">📉</div>Evolución diaria · ventas y cobertura</div></div>'+
+    '<div style="padding:4px 14px 14px">'+
+      '<div style="display:flex;flex-wrap:wrap;gap:16px;margin:2px 0 10px">'+
+        leg('#0284C7','Ventas S/')+leg('#E2E8F0','Cobertura total (visitados)')+
+        leg('#0EA5F9','Visitados netos')+leg('#16A34A','Cobertura neta (con venta)')+
+      '</div>'+
+      '<div id="tnd-wrap" style="position:relative">'+
+        '<svg id="tnd-svg" viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;overflow:visible" preserveAspectRatio="xMidYMid meet">'+s+'</svg>'+
+        '<div id="tnd-tip" style="position:absolute;display:none;pointer-events:none;background:#0F172A;color:#fff;border-radius:10px;padding:9px 11px;font-size:11.5px;line-height:1.65;box-shadow:0 8px 24px rgba(0,0,0,.25);white-space:nowrap;z-index:20"></div>'+
+      '</div>'+
+      '<div style="margin-top:8px;font-size:11.5px;color:#94A3B8">Solo días laborables (los domingos no se muestran, salvo que haya habido actividad). Los lunes van sombreados para ubicar el inicio de cada semana. Pasa el cursor por un día para ver el detalle.</div>'+
+    '</div></div>';
+}
+
+function activarTendencia(){
+  var svg=document.getElementById('tnd-svg');
+  if(!svg || !_TEND.length) return;
+  var wrap=document.getElementById('tnd-wrap');
+  var tip=document.getElementById('tnd-tip');
+  var cross=document.getElementById('tnd-cross');
+
+  function salir(){ tip.style.display='none'; if(cross) cross.setAttribute('opacity','0'); }
+
+  Array.prototype.forEach.call(svg.querySelectorAll('.tnd-hit'), function(el){
+    var mostrar = function(){
+      var i=+el.getAttribute('data-i'), d=_TEND[i];
+      if(!d) return;
+      var x=parseFloat(el.getAttribute('x'))+parseFloat(el.getAttribute('width'))/2;
+      if(cross){ cross.setAttribute('x1',x); cross.setAttribute('x2',x); cross.setAttribute('opacity','.28'); }
+      var ef = d.neto>0 ? Math.round(d.cv/d.neto*100) : 0;
+      tip.innerHTML =
+        '<div style="font-weight:800;margin-bottom:3px">'+_diaSem(d.fecha)+' '+d.fecha.slice(8,10)+'/'+d.fecha.slice(5,7)+'</div>'+
+        '<div style="color:#7DD3FC;font-weight:700">S/ '+fmt(d.tot)+'</div>'+
+        '<div style="color:#CBD5E1">Cobertura total: <b style="color:#fff">'+d.vis+'</b></div>'+
+        '<div style="color:#CBD5E1">Visitados netos: <b style="color:#fff">'+d.neto+'</b></div>'+
+        '<div style="color:#CBD5E1">Cobertura neta: <b style="color:#fff">'+d.cv+'</b></div>'+
+        '<div style="color:#CBD5E1">Efectividad: <b style="color:#fff">'+ef+'%</b></div>';
+      tip.style.display='block';
+      var rw=wrap.clientWidth, px=(x/1000)*rw;
+      var tw=tip.offsetWidth||150;
+      tip.style.left=Math.max(4, Math.min(rw-tw-4, px-tw/2))+'px';
+      tip.style.top='6px';
+    };
+    el.addEventListener('mouseenter', mostrar);
+    el.addEventListener('mouseleave', salir);
+    // En teléfono no hay cursor: el toque abre el detalle del día
+    el.addEventListener('touchstart', function(ev){ mostrar.call(el); }, {passive:true});
+  });
+  wrap.addEventListener('mouseleave', salir);
 }
 
 function buildNarrativa(m, data) {
@@ -3321,7 +3773,12 @@ function renderCausales() {
     html += '</div></div>';
   });
 
+  // Mismo evolutivo diario que en Resumen. Va ARRIBA porque la lista de
+  // causales es larga: así se ve al entrar, sin tener que bajar.
+  html = renderTendencia(data) + html;
+
   document.getElementById('content').innerHTML = html;
+  activarTendencia();
 }
 
 function analisisEjecutivoCausal(causal, data, info) {
@@ -4415,9 +4872,12 @@ function guardarComentario() {
     '.apro-b{font-size:13px;color:#475569;line-height:1.6;margin-bottom:12px}'+
     '.apro-b .sm{font-size:12px;color:#64748B}'+
     '.apro-btns{display:flex;gap:10px}'+
-    '.apro-btns button{flex:1;padding:11px;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer}'+
-    '.b-no{background:#fff;border:1.5px solid #CBD5E1 !important;color:#475569}'+
+    '.apro-btns button{flex:1;padding:14px 12px;border:none;border-radius:11px;font-size:15px;font-weight:800;cursor:pointer;line-height:1.2}'+
+    '.apro-btns button:active{transform:scale(.97)}'+
+    '.b-no{background:#fff;border:2px solid #CBD5E1 !important;color:#334155}'+
+    '.b-no:hover{border-color:#94A3B8 !important;background:#F8FAFC}'+
     '.b-si{background:#0EA5F9;color:#fff}'+
+    '.b-si:hover{background:#0284C7}'+
     '.bd{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px}'+
     '.bd.g{background:#DCFCE7;color:#15803D}.bd.r{background:#FEE2E2;color:#B91C1C}.bd.a{background:#FEF3C7;color:#B45309}.bd.b{background:#DBEAFE;color:#1D4ED8}'+
     '.tbl-wrap{overflow-x:auto}.tbl{width:100%;border-collapse:collapse;font-size:13px}'+
@@ -4490,7 +4950,7 @@ function pintarAproMarcas(){
     h += '<div class="apro-b"><div class="sm">Solicitado: '+fecha+'</div>';
     if(motivo) h += '<div class="sm">Motivo: '+motivo+'</div>';
     h += '</div><div class="apro-btns"><button class="b-no" onclick="resolverMarca(\''+id+'\',\'RECHAZADA\')">✕ Rechazar</button>';
-    h += '<button class="b-si" onclick="resolverMarca(\''+id+'\',\'APROBADA\')">↩ Rebotar (aprobar)</button></div></div>';
+    h += '<button class="b-si" onclick="resolverMarca(\''+id+'\',\'APROBADA\')">✓ Aprobar y devolver</button></div></div>';
   });
   cont.innerHTML = h+'</div>';
 }
