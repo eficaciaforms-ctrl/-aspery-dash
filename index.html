@@ -357,6 +357,35 @@ button{font-family:inherit;}
 .filt-tira{display:none}
 .t-corto{display:none}
 
+/* ── Actividad de supervisores ── */
+.act-res{display:flex;flex-wrap:wrap;gap:9px;margin:4px 0 16px}
+.act-res .r{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:9px 14px;font-size:12.5px;color:var(--t2)}
+.act-res .r b{color:var(--navy,#0F172A);font-size:16px;font-weight:800;margin-right:5px}
+.act-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.act-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 15px;position:relative;overflow:hidden}
+.act-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px}
+.act-card.e-hoy::before{background:#16A34A}
+.act-card.e-sem::before{background:#0EA5F9}
+.act-card.e-via::before{background:#D97706}
+.act-card.e-nun::before{background:#CBD5E1}
+.act-h{display:flex;align-items:center;gap:11px;padding-left:7px}
+.act-av{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:#fff;flex-shrink:0;background:#0EA5F9}
+.act-card.e-nun .act-av{background:#94A3B8}
+.act-u{font-size:14px;font-weight:800;color:var(--text);line-height:1.2}
+.act-n{font-size:11.5px;color:var(--t2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.act-chip{margin-left:auto;font-size:10.5px;font-weight:800;padding:4px 9px;border-radius:999px;white-space:nowrap;flex-shrink:0}
+.ch-hoy{background:#DCFCE7;color:#15803D}
+.ch-sem{background:#E0F2FE;color:#0369A1}
+.ch-via{background:#FEF3C7;color:#B45309}
+.ch-nun{background:#F1F5F9;color:#64748B}
+.act-last{font-size:12.5px;color:var(--t2);margin:11px 0 0 7px;line-height:1.5}
+.act-last b{color:var(--text)}
+.act-last .ago{color:var(--t3)}
+.act-nums{display:flex;gap:8px;margin:12px 0 0 7px}
+.act-nums div{flex:1;background:#F8FAFC;border:1px solid var(--border);border-radius:9px;padding:7px 6px;text-align:center}
+.act-nums b{display:block;font-size:17px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;line-height:1.1}
+.act-nums span{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.3px}
+
 /* ══════════════════════════════════════════════════════════
    FORMATO TELÉFONO (vertical)
    La barra lateral pasa a ser barra INFERIOR, como una app.
@@ -1335,14 +1364,16 @@ function pintarFuente(){
     b.title='Fuente fijada en Google Sheets. Toca para usar Firebase (más rápido).';
   } else if(_servido==='sheets'){
     b.textContent = corto ? 'GS⏳' : 'Datos: Sheets (histórico)'; b.style.background='#D97706'; b.style.color='#fff';
-    b.title='Firebase está activo, pero este rango incluye fechas anteriores a las que Firebase tiene guardadas, así que se leyó de Sheets para no mostrarte datos incompletos.';
+    b.title='Este rango empieza antes del '+_fbCobertura+', que es desde cuándo Firebase tiene datos. Se leyó de Sheets para no mostrarte un período incompleto. Toca dos veces el botón para volver a detectar la cobertura.';
   } else {
     b.textContent = corto ? '⚡FB' : 'Datos: Firebase ⚡'; b.style.background='#16A34A'; b.style.color='#fff';
-    b.title='Firebase (principal). Si pides fechas más antiguas, cae a Sheets automáticamente.';
+    b.title='Firebase (principal) · cobertura desde '+_fbCobertura+'. Si pides fechas más antiguas, cae a Sheets automáticamente.';
   }
 }
 function toggleFuente(){
   var f=getFuente()==='firebase'?'sheets':'firebase'; setFuente(f); _servido=''; pintarFuente(); _gasCache={};
+  // Olvidar la cobertura en caché: al volver a Firebase se re-detecta
+  _fbMin=null; try{ localStorage.removeItem('dash_fb_min'); localStorage.removeItem('dash_fb_min_t'); }catch(e){}
   if(f==='sheets') alert('Fuente fijada en GOOGLE SHEETS.\n\nMás lento, pero con todo el histórico.');
   else alert('Fuente fijada en FIREBASE ⚡ (principal).\n\nSi pides fechas anteriores a las que Firebase tiene, el dashboard usa Sheets solo para ese rango, automáticamente.');
   if(typeof recargar==='function') recargar();
@@ -1350,14 +1381,17 @@ function toggleFuente(){
 
 // ── Desde qué fecha hay datos en Firebase. Se detecta UNA vez y se recuerda,
 //    así no hay que configurar nada a mano ni gastar lecturas de más.
+// Cobertura REAL de Firebase, verificada al migrar el histórico
+// (25,619 documentos, del 2026-06-08 al 2026-10-10, 0 pendientes).
+// Este dato manda: la detección en vivo solo sirve para ampliarlo hacia atrás.
+var FB_COBERTURA_DESDE = '2026-06-08';
 var _fbMin=null, _fbEsperando=[];
 function fbMinFecha(cb){
   if(_fbMin!==null){ cb(_fbMin); return; }
-  // La caché vence a las 12 h: así, después de migrar histórico, el dashboard
-  // se entera solo de que Firebase ya cubre fechas más antiguas.
+  // Caché de 6 h. Se puede forzar la re-detección tocando el botón "Datos".
   try{
     var c=localStorage.getItem('dash_fb_min'), t=parseInt(localStorage.getItem('dash_fb_min_t')||0,10);
-    if(c && t && (Date.now()-t) < 43200000){ _fbMin=c; cb(_fbMin); return; }
+    if(c && t && (Date.now()-t) < 21600000){ _fbMin=c; cb(_fbMin); return; }
   }catch(e){}
   _fbEsperando.push(cb);
   if(_fbEsperando.length>1) return;            // ya hay una consulta en vuelo
@@ -1430,10 +1464,16 @@ function gasGetReal(params, callback){
   if(getFuente()!=='firebase' || !esLectura){ _gasGetSheets(params, callback); return; }
 
   var desde = params.desde || params.fecha || '';
-  fbMinFecha(function(min){
-    if(!min || (desde && String(desde) < String(min))){
+  fbMinFecha(function(detectado){
+    // Se toma la fecha MÁS ANTIGUA entre lo verificado y lo detectado.
+    // Si la detección falla, no se castiga a Firebase: manda lo verificado.
+    var min = FB_COBERTURA_DESDE;
+    if(detectado && String(detectado) < String(min)) min = String(detectado);
+    _fbCobertura = min;
+
+    if(desde && String(desde) < String(min)){
       _servido='sheets'; pintarFuente();
-      _gasGetSheets(params, callback); return;      // histórico → Sheets (completo)
+      _gasGetSheets(params, callback); return;   // de verdad es anterior a lo que hay
     }
     fbRead(params, function(res){
       if(res){ _servido='firebase'; pintarFuente(); callback(res); }
@@ -1441,6 +1481,7 @@ function gasGetReal(params, callback){
     });
   });
 }
+var _fbCobertura = FB_COBERTURA_DESDE;
 try{ setTimeout(pintarFuente, 0); }catch(e){}
 
 // Normalizar fecha que viene del GAS a formato YYYY-MM-DD
@@ -4981,29 +5022,127 @@ function renderAuditoria(){
   });
 }
 
-// ── Actividad de supervisores (solo jefe): frecuencia de ingreso ──
+// ══════════════════════════════════════════════════════════
+// Actividad de supervisores (solo jefe)
+// OJO: el GAS devuelve la fecha como ISO ("2026-10-13T05:00:00Z")
+// y la hora sobre la época de Sheets ("1899-12-30T20:27:28Z").
+// Hay que normalizar las dos o los conteos salen en cero.
+// ══════════════════════════════════════════════════════════
+
+// Recupera la hora de pared de una celda de Sheets.
+// Al reconstruir la fecha en el navegador (misma zona horaria que el script),
+// se recupera la hora original aunque venga desplazada a UTC.
+function _horaCelda(v){
+  if(v==null || v==='') return '';
+  var s=String(v).trim();
+  var m=s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if(m) return ('0'+m[1]).slice(-2)+':'+m[2];
+  var d=new Date(s);
+  if(isNaN(d.getTime())) return '';
+  return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+}
+function _hora12(hhmm){
+  if(!hhmm) return '';
+  var p=hhmm.split(':'); if(p.length<2) return hhmm;
+  var h=parseInt(p[0],10); if(isNaN(h)) return hhmm;
+  var suf=h<12?'a.m.':'p.m.', h12=h%12; if(h12===0) h12=12;
+  return h12+':'+p[1]+' '+suf;
+}
+function _haceCuanto(fechaISO, hhmm){
+  if(!fechaISO) return '';
+  var t=new Date(fechaISO+'T'+(hhmm||'12:00')+':00');
+  if(isNaN(t.getTime())) return '';
+  var seg=Math.floor((Date.now()-t.getTime())/1000);
+  if(seg<60) return 'hace un momento';
+  if(seg<3600) return 'hace '+Math.floor(seg/60)+' min';
+  if(seg<86400) return 'hace '+Math.floor(seg/3600)+' h';
+  var d=Math.floor(seg/86400);
+  if(d===1) return 'ayer';
+  if(d<30) return 'hace '+d+' días';
+  var me=Math.floor(d/30);
+  return 'hace '+me+(me===1?' mes':' meses');
+}
+function _iniciales(nm){
+  var p=String(nm||'').trim().split(/\s+/);
+  return ((p[0]||'')[0]||'')+((p[1]||'')[0]||'');
+}
+
 function renderActividad(){
   var cont = document.getElementById('content');
   cont.innerHTML = '<div class="loading"><div class="spinner"></div>Cargando actividad…</div>';
   gasGetReal({accion:'listar_accesos'}, function(r){
     var filas = (r && r.status==='ok' && r.filas) ? r.filas : [];
-    var hoyS=hoy(), d7=_fechaMenos(7), d30=_fechaMenos(30), agg={};
-    filas.forEach(function(f){
-      var u=String(f[2]||''); if(!u) return;
-      if(!agg[u]) agg[u]={u:u, hoy:0, s7:0, s30:0, ult:''};
-      var fe=String(f[0]||'');
-      if(fe===hoyS) agg[u].hoy++;
-      if(fe>=d7) agg[u].s7++;
-      if(fe>=d30) agg[u].s30++;
-      var marca=fe+' '+String(f[1]||''); if(marca>agg[u].ult) agg[u].ult=marca;
+    var hoyS=hoy(), d7=_fechaMenos(7), d30=_fechaMenos(30);
+
+    // Arrancar con TODOS los usuarios, para que también salgan los que nunca entraron
+    var agg={};
+    Object.keys(USERS).forEach(function(u){
+      agg[u]={u:u, nombre:USERS[u].nombre, zona:USERS[u].zona, role:USERS[u].role,
+              hoy:0, s7:0, s30:0, total:0, fecha:'', hora:''};
     });
-    var lista=Object.keys(agg).map(function(k){return agg[k];}).sort(function(a,b){return b.s30-a.s30;});
+
+    filas.forEach(function(f){
+      var u=String(f[2]||'').trim().toUpperCase(); if(!u) return;
+      if(!agg[u]) agg[u]={u:u, nombre:u, zona:'—', role:'sup', hoy:0,s7:0,s30:0,total:0, fecha:'', hora:''};
+      var fe=normalizarFecha(f[0]);        // ← aquí estaba el error: antes se comparaba el ISO crudo
+      var ho=_horaCelda(f[1]);
+      if(!fe) return;
+      agg[u].total++;
+      if(fe===hoyS) agg[u].hoy++;
+      if(fe>=d7)  agg[u].s7++;
+      if(fe>=d30) agg[u].s30++;
+      if(fe>agg[u].fecha || (fe===agg[u].fecha && ho>agg[u].hora)){ agg[u].fecha=fe; agg[u].hora=ho; }
+    });
+
+    var lista=Object.keys(agg).map(function(k){return agg[k];});
+    lista.forEach(function(x){
+      if(!x.fecha)            x.est='nun';
+      else if(x.fecha===hoyS) x.est='hoy';
+      else if(x.fecha>=d7)    x.est='sem';
+      else                    x.est='via';
+    });
+    var orden={hoy:0, sem:1, via:2, nun:3};
+    lista.sort(function(a,b){
+      if(orden[a.est]!==orden[b.est]) return orden[a.est]-orden[b.est];
+      if(a.fecha!==b.fecha) return a.fecha<b.fecha?1:-1;
+      return b.s30-a.s30;
+    });
+
+    var nHoy=lista.filter(function(x){return x.est==='hoy';}).length;
+    var nNunca=lista.filter(function(x){return x.est==='nun';}).length;
+    var nFrios=lista.filter(function(x){return x.est==='via';}).length;
+
     var h='<div class="panel"><h2 class="panel-t">📈 Actividad de supervisores</h2>';
-    h+='<p class="panel-sub">Con qué frecuencia entra cada usuario al centro de control.</p>';
-    if(!lista.length){ cont.innerHTML=h+'<div class="vacio">Aún no hay ingresos registrados.</div></div>'; return; }
-    h+='<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Usuario</th><th>Hoy</th><th>Últ. 7 días</th><th>Últ. 30 días</th><th>Última conexión</th></tr></thead><tbody>';
-    lista.forEach(function(x){ h+='<tr><td><b>'+x.u+'</b></td><td>'+x.hoy+'</td><td>'+x.s7+'</td><td>'+x.s30+'</td><td>'+(x.ult||'—')+'</td></tr>'; });
-    cont.innerHTML=h+'</tbody></table></div></div>';
+    h+='<p class="panel-sub">Quién entra al centro de control, cuándo fue su última conexión y con qué frecuencia.</p>';
+
+    h+='<div class="act-res">';
+    h+='<div class="r"><b>'+nHoy+'</b> de '+lista.length+' entraron hoy</div>';
+    if(nFrios)  h+='<div class="r"><b>'+nFrios+'</b> sin entrar hace más de 7 días</div>';
+    if(nNunca)  h+='<div class="r"><b>'+nNunca+'</b> nunca han entrado</div>';
+    h+='</div>';
+
+    var etq={hoy:'Entró hoy', sem:'Esta semana', via:'Inactivo', nun:'Nunca entró'};
+    h+='<div class="act-grid">';
+    lista.forEach(function(x){
+      var cuando = x.fecha
+        ? ('<b>'+fmtFecha(x.fecha)+(x.hora?', '+_hora12(x.hora):'')+'</b> <span class="ago">· '+_haceCuanto(x.fecha,x.hora)+'</span>')
+        : '<b>Sin registros de ingreso</b>';
+      h+='<div class="act-card e-'+x.est+'">';
+      h+= '<div class="act-h">';
+      h+=  '<div class="act-av">'+(_iniciales(x.nombre)||x.u.slice(0,2))+'</div>';
+      h+=  '<div><div class="act-u">'+x.u+'</div><div class="act-n">'+x.nombre+(x.zona?' · '+x.zona:'')+(x.role==='jefe'?' · Jefe':'')+'</div></div>';
+      h+=  '<span class="act-chip ch-'+x.est+'">'+etq[x.est]+'</span>';
+      h+= '</div>';
+      h+= '<div class="act-last">Última conexión: '+cuando+'</div>';
+      h+= '<div class="act-nums">';
+      h+=  '<div><b>'+x.hoy+'</b><span>hoy</span></div>';
+      h+=  '<div><b>'+x.s7+'</b><span>7 días</span></div>';
+      h+=  '<div><b>'+x.s30+'</b><span>30 días</span></div>';
+      h+= '</div>';
+      h+='</div>';
+    });
+    h+='</div>';
+    cont.innerHTML=h+'</div>';
   });
 }
 
