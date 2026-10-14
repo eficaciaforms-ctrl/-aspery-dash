@@ -39,6 +39,9 @@ button{font-family:inherit;cursor:pointer}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.5)}70%{box-shadow:0 0 0 8px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
 .top .who{margin-left:auto;font-size:12.5px;color:#CBD5E1}
 .top .out{background:rgba(255,255,255,.12);border:none;color:#fff;font-size:12px;font-weight:600;padding:8px 12px;border-radius:9px;margin-left:10px}
+.top .volver{background:var(--blue);color:#fff;font-size:12px;font-weight:700;padding:9px 13px;border-radius:9px;margin-left:10px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;flex-shrink:0}
+.top .volver:hover{background:#0284C7}
+.top .volver:active{transform:scale(.97)}
 .status{background:#FEF3C7;color:#B45309;font-size:12px;padding:7px 16px;text-align:center;flex-shrink:0;display:none}
 
 .main{flex:1;display:flex;min-height:0}
@@ -75,7 +78,10 @@ button{font-family:inherit;cursor:pointer}
   .top{padding:9px 11px;gap:7px;flex-wrap:nowrap}
   .top .brand{font-size:14.5px;white-space:nowrap}
   .top .who{font-size:11px;margin-left:auto;max-width:30%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:1}
-  .top .out{padding:8px 11px;min-height:38px;margin-left:7px;flex-shrink:0}
+  .top .out{padding:8px 10px;min-height:38px;margin-left:6px;flex-shrink:0}
+  /* Solo el ícono: con el texto no cabe todo en una fila */
+  .top .volver{padding:9px 11px;min-height:38px;margin-left:6px;font-size:14px}
+  .v-largo{display:none}
   /* El punto verde basta como señal de "en vivo"; el texto no cabe */
   .live-pill{font-size:0;padding:6px;gap:0;flex-shrink:0}
   .live-pill .dot{width:11px;height:11px}
@@ -128,6 +134,7 @@ button{font-family:inherit;cursor:pointer}
     <div class="brand">Asper<b>y</b> · En Vivo</div>
     <div class="live-pill"><span class="dot"></span>Tiempo real</div>
     <div class="who" id="who">—</div>
+    <a class="volver" href="index.html" title="Volver al dashboard de Seguimiento y Control">📊<span class="v-largo"> Dashboard</span></a>
     <button class="out" onclick="logout()">Salir</button>
   </div>
   <div class="status" id="status"></div>

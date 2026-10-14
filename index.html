@@ -357,6 +357,21 @@ button{font-family:inherit;}
 .filt-tira{display:none}
 .t-corto{display:none}
 
+/* ── Aprobación masiva de relevos ── */
+.apro-bulk{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#F8FAFC;border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin:2px 0 14px}
+.apro-bulk .ab-txt{font-size:13px;color:var(--t2)}
+.apro-bulk .ab-txt b{color:var(--text)}
+.ab-btn{margin-left:auto;background:#16A34A;color:#fff;border:none;border-radius:10px;padding:12px 20px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;min-height:46px;white-space:nowrap}
+.ab-btn:hover{background:#15803D}
+.ab-btn:active{transform:scale(.97)}
+.ab-prog{height:10px;background:#E2E8F0;border-radius:999px;overflow:hidden;margin:14px 0 10px}
+.ab-bar{height:100%;background:#16A34A;transition:width .25s ease}
+.ab-stat{font-size:13px;color:var(--t2);font-weight:600}
+@media (max-width:768px){
+  .apro-bulk{flex-direction:column;align-items:stretch}
+  .ab-btn{margin-left:0;width:100%}
+}
+
 /* ── Actividad de supervisores ── */
 .act-res{display:flex;flex-wrap:wrap;gap:9px;margin:4px 0 16px}
 .act-res .r{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:9px 14px;font-size:12.5px;color:var(--t2)}
@@ -4952,11 +4967,22 @@ function pintarAproRelevos(){
   var h = '<div class="panel"><h2 class="panel-t">✋ Aprobaciones · Relevos</h2>';
   h += '<p class="panel-sub">'+_APRO_REL.length+' solicitud(es) pendiente(s) de tu '+(SESION.role==='jefe'?'canal':'equipo')+'.</p>';
   if(!_APRO_REL.length){ cont.innerHTML = h+'<div class="vacio">No hay solicitudes pendientes. ✓</div></div>'; return; }
+
+  // Resumen + acción masiva
+  var nBorrar=0, nEditar=0;
+  _APRO_REL.forEach(function(m){ (String(m[8]||'EDITAR').toUpperCase()==='BORRAR') ? nBorrar++ : nEditar++; });
+  h += '<div class="apro-bulk">';
+  h +=  '<div class="ab-txt"><b>'+_APRO_REL.length+' pendientes</b>'+
+        (nEditar?' · '+nEditar+' edición(es)':'')+(nBorrar?' · '+nBorrar+' eliminación(es)':'')+'</div>';
+  h +=  '<button class="ab-btn" onclick="aprobarTodosRelevos()">✓ Aprobar todo</button>';
+  h += '</div>';
+
   _APRO_REL.forEach(function(m){
     var id=m[0], user=m[2], pdv=m[3], fechaRel=m[4], antes=m[5], despues=m[6], tipo=String(m[8]||'EDITAR').toUpperCase();
     var tag = tipo==='BORRAR' ? '<span class="bd r">🗑 Eliminar</span>' : '<span class="bd b">✏️ Editar</span>';
+    var fRel = normalizarFecha(fechaRel); fRel = fRel ? fmtFecha(fRel) : (fechaRel||'—');
     h += '<div class="apro-card"><div class="apro-h"><b>'+user+'</b> '+tag+'</div>';
-    h += '<div class="apro-b"><div>PDV: <b>'+pdv+'</b></div><div class="sm">Relevo: '+fechaRel+'</div>';
+    h += '<div class="apro-b"><div>PDV: <b>'+pdv+'</b></div><div class="sm">Relevo: '+fRel+'</div>';
     if(antes) h += '<div class="sm">Antes: '+antes+'</div>';
     if(despues) h += '<div class="sm">Después: '+despues+'</div>';
     h += '</div><div class="apro-btns"><button class="b-no" onclick="resolverRelevo(\''+id+'\',\'RECHAZAR\')">✕ Rechazar</button>';
@@ -4964,6 +4990,59 @@ function pintarAproRelevos(){
   });
   cont.innerHTML = h+'</div>';
 }
+// ══════════════════════════════════════════════════════════
+// Aprobar TODAS las solicitudes de relevo pendientes.
+// Se procesan de una en una (no en paralelo) para no saturar
+// el Apps Script, y si alguna falla se informa al final.
+// ══════════════════════════════════════════════════════════
+var _APRO_MASIVO = false;
+function aprobarTodosRelevos(){
+  if(_APRO_MASIVO) return;
+  var items = _APRO_REL.slice();
+  if(!items.length) return;
+
+  var nB=0; items.forEach(function(m){ if(String(m[8]||'EDITAR').toUpperCase()==='BORRAR') nB++; });
+  var aviso = 'Vas a APROBAR las ' + items.length + ' solicitudes pendientes.\n\n';
+  if(nB) aviso += '⚠ ' + nB + ' de ellas son ELIMINACIONES: se borrará ese relevo del reporte.\n\n';
+  aviso += 'Esto no se puede deshacer en bloque. ¿Continuar?';
+  if(!confirm(aviso)) return;
+
+  _APRO_MASIVO = true;
+  var cont = document.getElementById('content');
+  var ok=0, fail=0, i=0, fallidas=[];
+
+  function pintarProgreso(){
+    cont.innerHTML = '<div class="panel"><h2 class="panel-t">✋ Aprobando relevos…</h2>'+
+      '<p class="panel-sub">Procesando ' + Math.min(i+1, items.length) + ' de ' + items.length + '. No cierres esta pestaña.</p>'+
+      '<div class="ab-prog"><div class="ab-bar" style="width:' + Math.round(i/items.length*100) + '%"></div></div>'+
+      '<div class="ab-stat">✓ ' + ok + ' aprobadas' + (fail ? '  ·  ✕ ' + fail + ' con error' : '') + '</div></div>';
+  }
+
+  function siguiente(){
+    if(i >= items.length){
+      _APRO_MASIVO = false;
+      try{ _gasCache={}; }catch(e){}
+      var msg = '✓ ' + ok + ' solicitud(es) aprobada(s).';
+      if(fail) msg += '\n\n✕ ' + fail + ' no se pudo(ieron) procesar:\n' + fallidas.slice(0,10).join('\n') +
+                      (fallidas.length>10 ? '\n…y ' + (fallidas.length-10) + ' más' : '') +
+                      '\n\nQuedaron pendientes: vuelve a intentarlo.';
+      alert(msg);
+      renderAproRelevos();
+      return;
+    }
+    pintarProgreso();
+    var m = items[i];
+    gasPostReal({accion:'RESOLVER_MOD', id_mod:m[0], resolucion:'APROBAR',
+                 resuelto_por:SESION.user, rol:SESION.role}, function(r){
+      if(r && r.status==='ok') ok++;
+      else { fail++; fallidas.push('· ' + (m[2]||'?') + ' — ' + (m[3]||'?')); }
+      i++;
+      setTimeout(siguiente, 120);   // respiro entre llamadas
+    });
+  }
+  siguiente();
+}
+
 function resolverRelevo(id, dec){
   if(!confirm('¿'+(dec==='APROBAR'?'Aprobar':'Rechazar')+' esta solicitud?')) return;
   gasPostReal({accion:'RESOLVER_MOD', id_mod:id, resolucion:dec, resuelto_por:SESION.user, rol:SESION.role}, function(r){
